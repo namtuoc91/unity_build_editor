@@ -174,7 +174,8 @@ namespace Raccoon.BuildEditor
 
         public static void Install(string serial, string apkPath, Action<bool, string> onDone)
         {
-            Run($"-s {serial} install -r \"{apkPath}\"", (code, output, err) =>
+            // -d: cho phép version code thấp hơn bản đang cài (chỉ được khi bản cũ debuggable).
+            Run($"-s {serial} install -r -d \"{apkPath}\"", (code, output, err) =>
             {
                 var ok = code == 0 && output.Contains("Success");
                 onDone?.Invoke(ok, ok ? output.Trim() : (err + "\n" + output).Trim());
@@ -190,24 +191,77 @@ namespace Raccoon.BuildEditor
             });
         }
 
+        public static void Uninstall(string serial, string appId, Action<bool, string> onDone)
+        {
+            Run($"-s {serial} uninstall {appId}", (code, output, err) =>
+            {
+                var ok = code == 0 && output.Contains("Success");
+                onDone?.Invoke(ok, ok ? "Đã uninstall " + appId : (err + "\n" + output).Trim());
+            });
+        }
+
+        /// <summary>Lỗi chỉ sửa được bằng cách gỡ bản cũ: version code thấp hơn hoặc khác keystore.</summary>
+        public static bool NeedsUninstall(string installError) =>
+            installError != null &&
+            (installError.Contains("INSTALL_FAILED_VERSION_DOWNGRADE") ||
+             installError.Contains("INSTALL_FAILED_UPDATE_INCOMPATIBLE"));
+
         public static void InstallAndLaunch(string serial, string apkPath, string appId, Action<bool, string> onDone)
         {
             Debug.Log($"[RaccoonBuild] adb install → {serial}: {apkPath}");
             Install(serial, apkPath, (ok, msg) =>
             {
-                if (!ok)
+                if (ok)
                 {
-                    Debug.LogError($"[RaccoonBuild] Install lỗi: {msg}\n(Nếu lỗi signature do đổi keystore → uninstall app trước.)");
-                    onDone?.Invoke(false, msg);
+                    LaunchAfterInstall(serial, appId, onDone);
                     return;
                 }
 
-                Launch(serial, appId, (ok2, msg2) =>
+                if (NeedsUninstall(msg) && !string.IsNullOrEmpty(appId))
                 {
-                    if (ok2) Debug.Log("[RaccoonBuild] " + msg2);
-                    else Debug.LogWarning("[RaccoonBuild] Launch lỗi: " + msg2);
-                    onDone?.Invoke(ok2, ok2 ? "Đã cài + launch." : msg2);
-                });
+                    var reason = msg.Contains("VERSION_DOWNGRADE")
+                        ? "Máy đang có bản version code cao hơn."
+                        : "Máy đang có bản ký bằng keystore khác.";
+                    if (EditorUtility.DisplayDialog("Không cài đè được",
+                            $"{reason}\n\nUninstall {appId} (mất data app) rồi cài lại?", "Uninstall + cài lại", "Hủy"))
+                    {
+                        Uninstall(serial, appId, (okU, msgU) =>
+                        {
+                            if (!okU)
+                            {
+                                Debug.LogError("[RaccoonBuild] Uninstall lỗi: " + msgU);
+                                onDone?.Invoke(false, msgU);
+                                return;
+                            }
+
+                            Debug.Log("[RaccoonBuild] " + msgU);
+                            Install(serial, apkPath, (ok2, msg2) =>
+                            {
+                                if (ok2) LaunchAfterInstall(serial, appId, onDone);
+                                else Fail(msg2, onDone);
+                            });
+                        });
+                        return;
+                    }
+                }
+
+                Fail(msg, onDone);
+            });
+        }
+
+        static void Fail(string msg, Action<bool, string> onDone)
+        {
+            Debug.LogError($"[RaccoonBuild] Install lỗi: {msg}");
+            onDone?.Invoke(false, msg);
+        }
+
+        static void LaunchAfterInstall(string serial, string appId, Action<bool, string> onDone)
+        {
+            Launch(serial, appId, (ok, msg) =>
+            {
+                if (ok) Debug.Log("[RaccoonBuild] " + msg);
+                else Debug.LogWarning("[RaccoonBuild] Launch lỗi: " + msg);
+                onDone?.Invoke(ok, ok ? "Đã cài + launch." : msg);
             });
         }
     }

@@ -2,6 +2,11 @@
 
 Format theo [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), version theo [SemVer](https://semver.org/).
 
+## [0.0.5] - 2026-09-29
+### Fixed
+- adb install thêm `-d` (cho phép cài bản version code thấp hơn nếu bản cũ debuggable).
+- Lỗi `INSTALL_FAILED_VERSION_DOWNGRADE` / `INSTALL_FAILED_UPDATE_INCOMPATIBLE` → hỏi uninstall bản cũ rồi cài lại + launch.
+
 ## [0.0.4] - 2026-09-29
 ### Changed
 - Build luôn nén LZ4HC (`BuildOptions.CompressWithLz4HC`) cho cả Dev và Release.
