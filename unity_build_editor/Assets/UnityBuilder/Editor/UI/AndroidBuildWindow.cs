@@ -11,6 +11,7 @@ namespace Raccoon.BuildEditor
     public class AndroidBuildWindow : EditorWindow
     {
         static readonly string[] Tabs = { "Devices", "History" };
+        const float IconFieldSize = 96f;
 
         BuildConfig _config;
         BuildHistory _history;
@@ -233,8 +234,13 @@ namespace Raccoon.BuildEditor
             {
                 var current = AppIconService.GetDefaultIcon();
                 EditorGUILayout.PrefixLabel(new GUIContent("Icon", "Kéo thả texture vào ô. Set Default Icon + clear icon Android Adaptive/Round/Legacy."));
-                var icon = (Texture2D)EditorGUILayout.ObjectField(current, typeof(Texture2D), false,
-                    GUILayout.Width(64), GUILayout.Height(64));
+                // Rect cố định + tắt indent để ô luôn vuông (indent của foldout làm hẹp chiều ngang).
+                var rect = GUILayoutUtility.GetRect(IconFieldSize, IconFieldSize,
+                    GUILayout.Width(IconFieldSize), GUILayout.Height(IconFieldSize));
+                var indent = EditorGUI.indentLevel;
+                EditorGUI.indentLevel = 0;
+                var icon = (Texture2D)EditorGUI.ObjectField(rect, current, typeof(Texture2D), false);
+                EditorGUI.indentLevel = indent;
                 if (icon != current && icon != null)
                 {
                     AppIconService.SetIcon(icon);
