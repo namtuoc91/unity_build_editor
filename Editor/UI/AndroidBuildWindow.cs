@@ -268,7 +268,7 @@ namespace Raccoon.BuildEditor
         {
             p.mode = (BuildMode)EditorGUILayout.EnumPopup("Mode", p.mode);
             var release = p.mode == BuildMode.Release;
-            EditorGUILayout.LabelField(" ", release ? "AAB · ARMv7 + ARM64 · IL2CPP" : "APK · ARM64 · IL2CPP",
+            EditorGUILayout.LabelField(" ", release ? "AAB · ARMv7 + ARM64 · IL2CPP · LZ4HC" : "APK · ARM64 · IL2CPP · LZ4HC",
                 EditorStyles.miniLabel);
 
             using (new EditorGUI.DisabledScope(release))

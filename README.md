@@ -1,6 +1,6 @@
 # Raccoon Build Editor (`com.raccoon.build-editor`)
 
-Editor tool build Android (APK/AAB) cho **Unity 6** (6000.0+). Backend luôn IL2CPP.
+Editor tool build Android (APK/AAB) cho **Unity 6** (6000.0+). Backend luôn IL2CPP, compression luôn LZ4HC.
 
 ## Cài đặt
 
@@ -9,7 +9,7 @@ Source nằm ở `unity_build_editor/Assets/UnityBuilder/`; GitHub Action tách 
 Package Manager → `+` → **Add package from git URL...**:
 
 ```
-https://github.com/namtuoc91/unity_build_editor.git#v0.0.3
+https://github.com/namtuoc91/unity_build_editor.git#v0.0.4
 ```
 
 Hoặc bản mới nhất: `https://github.com/namtuoc91/unity_build_editor.git#upm`
@@ -19,7 +19,7 @@ Hoặc thêm thẳng vào `Packages/manifest.json`:
 ```json
 {
   "dependencies": {
-    "com.raccoon.build-editor": "https://github.com/namtuoc91/unity_build_editor.git#v0.0.3"
+    "com.raccoon.build-editor": "https://github.com/namtuoc91/unity_build_editor.git#v0.0.4"
   }
 }
 ```

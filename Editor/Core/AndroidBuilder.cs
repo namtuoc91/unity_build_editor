@@ -127,7 +127,8 @@ namespace Raccoon.BuildEditor
                 var path = Path.Combine(folder, fileName + "." + BuildRules.Extension(preset.mode));
 
                 // 7. Build
-                var options = BuildOptions.None;
+                // Luôn nén LZ4HC (cả Dev lẫn Release), không có option trong preset.
+                var options = BuildOptions.CompressWithLz4HC;
                 if (fx.development) options |= BuildOptions.Development;
                 if (fx.scriptDebugging) options |= BuildOptions.AllowDebugging;
                 if (fx.autoconnectProfiler) options |= BuildOptions.ConnectWithProfiler;
