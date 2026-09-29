@@ -9,7 +9,7 @@ Source nằm ở `unity_build_editor/Assets/UnityBuilder/`; GitHub Action tách 
 Package Manager → `+` → **Add package from git URL...**:
 
 ```
-https://github.com/namtuoc91/unity_build_editor.git#v0.0.7
+https://github.com/namtuoc91/unity_build_editor.git#v0.0.9
 ```
 
 Hoặc bản mới nhất: `https://github.com/namtuoc91/unity_build_editor.git#upm`
@@ -19,7 +19,7 @@ Hoặc thêm thẳng vào `Packages/manifest.json`:
 ```json
 {
   "dependencies": {
-    "com.raccoon.build-editor": "https://github.com/namtuoc91/unity_build_editor.git#v0.0.7"
+    "com.raccoon.build-editor": "https://github.com/namtuoc91/unity_build_editor.git#v0.0.9"
   }
 }
 ```
@@ -31,7 +31,7 @@ Menu **Tools → Raccoon → Android Build**.
 |---|---|
 | Preset bar | Chọn / thêm / duplicate / xóa preset (mặc định Dev + Release). Đổi tên ở mục App. |
 | App | App Name + Icon (kéo thả texture → set Default Icon + clear icon Android Adaptive/Round/Legacy), App ID (theo preset), Version, Version Code (−/+), Auto-increment |
-| Build | Mode, Development Build (+ Script Debugging / Profiler), No Ads (+ No Ads Rules khi bật), Use Test Ad, Clean cache, App Bundle size warning |
+| Build | Mode, Development Build (+ Script Debugging / Profiler), No Ads, No Ads Rules (foldout), Use Test Ad, Clean cache, App Bundle size warning |
 | Signing | Keystore path + alias (lưu config), password (chỉ SessionState) |
 | Scenes | Danh sách scene build, đồng bộ với Build Settings |
 | Output | Folder + template tên file |
@@ -53,7 +53,7 @@ Menu **Tools → Raccoon → Android Build**.
 - Tool **sửa thật + save** scene trong build list và asset `AdsScriptableObj`, không restore sau build.
 
 ### No Ads Rules (riêng từng project)
-Dùng khi game có object cần đổi thêm biến theo No Ads (vd ẩn nút Remove Ads, tắt banner placeholder). Chỉ hiện dưới checkbox No Ads khi bật (Dev). Lưu trong `RaccoonBuildConfig.json` (dùng chung mọi preset) nên set 1 lần, lần sau không phải set lại; tắt No Ads thì rule vẫn còn và vẫn áp giá trị "Value Has Ads".
+Dùng khi game có object cần đổi thêm biến theo No Ads (vd ẩn nút Remove Ads, tắt banner placeholder). Nằm dưới checkbox No Ads (mục Build), luôn hiện và thu gọn/mở được; tiêu đề ghi đang áp Value No Ads hay Value Has Ads. Lưu trong `RaccoonBuildConfig.json` (dùng chung mọi preset) nên set 1 lần, lần sau không phải set lại.
 
 | Field | Ý nghĩa |
 |---|---|
@@ -66,7 +66,8 @@ Dùng khi game có object cần đổi thêm biến theo No Ads (vd ẩn nút Re
 - Kéo GameObject từ Hierarchy (hoặc Component từ header Inspector) vào ô cạnh "Rule n" để tự điền; nút ▼ chọn object / component / property — scene chưa mở thì tool mở tạm (Additive) để đọc rồi đóng.
 - "Value Has Ads" áp cho Dev không bật No Ads **và Release** → nên điền cả 2 giá trị để build Release luôn đúng.
 - Build: mở từng scene → set qua `SerializedObject` → **save scene** (không restore), giống `_creativeMode`. Không tìm thấy object / component / property, parse sai giá trị hoặc đọc lại sai → **chặn build**.
-- Nút "Kiểm tra (No Ads)" / "Kiểm tra (có Ads)": chạy thử, báo giá trị hiện tại và giá trị sẽ set, không sửa gì.
+- Nút "Kiểm tra (No Ads / Has Ads)": chạy thử, báo giá trị hiện tại và giá trị sẽ set, không sửa gì.
+- Nút "Áp dụng + Save (No Ads / Has Ads)": set + save scene thật như lúc build nhưng **không build** → mở scene kiểm tra rồi mới Build.
 - Chưa cài adpack mà có rule → vẫn bật được No Ads (chỉ áp rule).
 
 ### Version code
