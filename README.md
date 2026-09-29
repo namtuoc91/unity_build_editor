@@ -9,7 +9,7 @@ Source nằm ở `unity_build_editor/Assets/UnityBuilder/`; GitHub Action tách 
 Package Manager → `+` → **Add package from git URL...**:
 
 ```
-https://github.com/namtuoc91/unity_build_editor.git#v0.0.9
+https://github.com/namtuoc91/unity_build_editor.git#v0.0.10
 ```
 
 Hoặc bản mới nhất: `https://github.com/namtuoc91/unity_build_editor.git#upm`
@@ -19,7 +19,7 @@ Hoặc thêm thẳng vào `Packages/manifest.json`:
 ```json
 {
   "dependencies": {
-    "com.raccoon.build-editor": "https://github.com/namtuoc91/unity_build_editor.git#v0.0.9"
+    "com.raccoon.build-editor": "https://github.com/namtuoc91/unity_build_editor.git#v0.0.10"
   }
 }
 ```
@@ -55,6 +55,8 @@ Menu **Tools → Raccoon → Android Build**.
 ### No Ads Rules (riêng từng project)
 Dùng khi game có object cần đổi thêm biến theo No Ads (vd ẩn nút Remove Ads, tắt banner placeholder). Nằm dưới checkbox No Ads (mục Build), luôn hiện và thu gọn/mở được; tiêu đề ghi đang áp Value No Ads hay Value Has Ads. Lưu trong `RaccoonBuildConfig.json` (dùng chung mọi preset) nên set 1 lần, lần sau không phải set lại.
 
+Đầu danh sách luôn có rule **built-in** (chỉ đọc) của adpack: mọi `RaccoonAdsManager._creativeMode` = `true` khi No Ads / `false` khi Has Ads + Release (xem mục Ads). Rule dưới đây là rule thêm của project.
+
 | Field | Ý nghĩa |
 |---|---|
 | Scene | Chọn scene trong project (kéo thả / picker / ▼ chia nhóm Build list · Khác); trống = mọi scene trong build list |
@@ -67,7 +69,7 @@ Dùng khi game có object cần đổi thêm biến theo No Ads (vd ẩn nút Re
 - "Value Has Ads" áp cho Dev không bật No Ads **và Release** → nên điền cả 2 giá trị để build Release luôn đúng.
 - Build: mở từng scene → set qua `SerializedObject` → **save scene** (không restore), giống `_creativeMode`. Không tìm thấy object / component / property, parse sai giá trị hoặc đọc lại sai → **chặn build**.
 - Nút "Kiểm tra (No Ads / Has Ads)": chạy thử, báo giá trị hiện tại và giá trị sẽ set, không sửa gì.
-- Nút "Áp dụng + Save (No Ads / Has Ads)": set + save scene thật như lúc build nhưng **không build** → mở scene kiểm tra rồi mới Build.
+- Nút "Áp dụng + Save (No Ads / Has Ads)": set + save scene thật như lúc build (gồm cả built-in `_creativeMode`; Has Ads set `use_test_ad` theo Use Test Ad của preset, Release = false) nhưng **không build** → mở scene kiểm tra rồi mới Build.
 - Chưa cài adpack mà có rule → vẫn bật được No Ads (chỉ áp rule).
 
 ### Version code

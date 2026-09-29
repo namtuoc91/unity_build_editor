@@ -2,6 +2,11 @@
 
 Format theo [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), version theo [SemVer](https://semver.org/).
 
+## [0.0.10] - 2026-09-29
+### Added
+- No Ads Rules hiện rule built-in (chỉ đọc) của adpack: `RaccoonAdsManager._creativeMode` true (No Ads) / false (Has Ads + Release) + `use_test_ad`.
+- Nút "Áp dụng + Save" set luôn rule built-in adpack (`_creativeMode`, `use_test_ad` theo preset).
+
 ## [0.0.9] - 2026-09-29
 ### Changed
 - No Ads Rules luôn hiện dạng foldout (thu gọn/mở, nhớ trạng thái), không còn ẩn khi tắt No Ads; tiêu đề ghi đang áp Value No Ads / Value Has Ads.

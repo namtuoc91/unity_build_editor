@@ -305,8 +305,8 @@ namespace Raccoon.BuildEditor
             // Rule luôn hiện (collapse được); lưu ở config chung nên các lần sau / preset khác dùng lại.
             var enabledRules = _config.noAdsRules.Count(r => r.enabled);
             var foldRules = EditorPrefs.GetBool(FoldNoAdsRulesKey, true);
-            var title = $"No Ads Rules ({enabledRules})" +
-                        (enabledRules > 0 ? (p.noAds && !release ? " → áp Value No Ads" : " → áp Value Has Ads") : "");
+            var title = $"No Ads Rules ({enabledRules}{(AdsSettingApplier.IsAdPackInstalled ? " + built-in" : "")})" +
+                        (enabledRules > 0 || AdsSettingApplier.IsAdPackInstalled ? (p.noAds && !release ? " → áp Value No Ads" : " → áp Value Has Ads") : "");
             var newFold = EditorGUILayout.Foldout(foldRules, title, true, EditorStyles.foldoutHeader);
             if (newFold != foldRules) EditorPrefs.SetBool(FoldNoAdsRulesKey, newFold);
             if (newFold)
@@ -422,6 +422,8 @@ namespace Raccoon.BuildEditor
                 "Kéo GameObject (Hierarchy) hoặc Component (header Inspector) vào ô bên cạnh 'Rule n' để tự điền. " +
                 "Nút ▼ chọn scene / object / component / property (scene chưa mở thì tự mở tạm để đọc).", MessageType.None);
 
+            DrawBuiltInAdsRule();
+
             var rules = _config.noAdsRules;
             for (var i = 0; i < rules.Count; i++)
             {
@@ -500,9 +502,9 @@ namespace Raccoon.BuildEditor
                 GUILayout.FlexibleSpace();
                 using (new EditorGUI.DisabledScope(rules.Count == 0))
                 {
-                    if (GUILayout.Button(new GUIContent("Áp dụng + Save (No Ads)", "Set Value No Ads + save scene, không build")))
+                    if (GUILayout.Button(new GUIContent("Áp dụng + Save (No Ads)", "Set built-in _creativeMode = true + Value No Ads + save scene, không build")))
                         EditorApplication.delayCall += () => RunNoAdsRules(true, true);
-                    if (GUILayout.Button(new GUIContent("Áp dụng + Save (Has Ads)", "Set Value Has Ads + save scene, không build")))
+                    if (GUILayout.Button(new GUIContent("Áp dụng + Save (Has Ads)", "Set built-in _creativeMode = false (+ use_test_ad theo preset) + Value Has Ads + save scene, không build")))
                         EditorApplication.delayCall += () => RunNoAdsRules(false, true);
                 }
             }
@@ -510,6 +512,30 @@ namespace Raccoon.BuildEditor
             if (_ruleCheck != null)
                 foreach (var (type, text) in _ruleCheck)
                     EditorGUILayout.HelpBox(text, type);
+        }
+
+        /// <summary>Rule cố định của com.raccoon.adpack (AdsSettingApplier), chỉ hiển thị — không sửa/xóa được.</summary>
+        static void DrawBuiltInAdsRule()
+        {
+            var installed = AdsSettingApplier.IsAdPackInstalled;
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            {
+                EditorGUILayout.LabelField(installed ? "Built-in (adpack) — luôn áp" : "Built-in (adpack) — chưa cài adpack, bỏ qua",
+                    EditorStyles.boldLabel);
+                using (new EditorGUI.DisabledScope(true))
+                {
+                    EditorGUILayout.TextField("Scene", "(mọi scene trong build list)");
+                    EditorGUILayout.TextField("Object path", "(mọi object có component)");
+                    EditorGUILayout.TextField("Component", AdsSettingApplier.ManagerTypeName);
+                    EditorGUILayout.TextField("Property", AdsSettingApplier.CreativeModeField);
+                    EditorGUILayout.TextField("Value No Ads", "true");
+                    EditorGUILayout.TextField("Value Has Ads", "false");
+                }
+
+                EditorGUILayout.LabelField(" ",
+                    $"+ {AdsSettingApplier.AdsDataField}.{AdsSettingApplier.UseTestAdField} = Use Test Ad (Has Ads), Release = false",
+                    EditorStyles.miniLabel);
+            }
         }
 
         /// <summary>Chọn scene trong project (kéo thả / picker / ▼); trống = mọi scene build list.</summary>
@@ -792,14 +818,32 @@ namespace Raccoon.BuildEditor
             var list = new List<(MessageType, string)>();
             try
             {
+                var state = noAds ? "No Ads" : "Has Ads";
+                var builtInErrors = new List<string>();
+                if (apply && AdsSettingApplier.IsAdPackInstalled)
+                {
+                    // Built-in adpack: giống bước build. Has Ads lấy Use Test Ad theo preset (Release = false).
+                    var preset = _config.ActivePreset;
+                    var target = noAds
+                        ? new AdsTarget(true, null)
+                        : new AdsTarget(false, preset != null && preset.mode != BuildMode.Release && preset.useTestAd);
+                    var warnings = new List<string>();
+                    builtInErrors = AdsSettingApplier.Apply(target, _config.EnabledScenePaths, warnings);
+                    list.AddRange(builtInErrors.Select(e => (MessageType.Error, "Built-in: " + e)));
+                    list.AddRange(warnings.Select(w => (MessageType.Warning, "Built-in: " + w)));
+                    if (builtInErrors.Count == 0)
+                        list.Add((MessageType.Info,
+                            $"Built-in: {AdsSettingApplier.CreativeModeField} = {(target.creativeMode ? "true" : "false")}" +
+                            (target.useTestAd.HasValue ? $", {AdsSettingApplier.UseTestAdField} = {(target.useTestAd.Value ? "true" : "false")}" : "")));
+                }
+
                 var res = NoAdsRuleApplier.Apply(_config.noAdsRules, noAds, _config.EnabledScenePaths, !apply);
                 list.AddRange(res.errors.Select(e => (MessageType.Error, e)));
                 list.AddRange(res.warnings.Select(w => (MessageType.Warning, w)));
                 list.AddRange(res.infos.Select(i => (MessageType.Info, i)));
-                var state = noAds ? "No Ads" : "Has Ads";
                 if (!NoAdsRuleApplier.HasActiveRules(_config.noAdsRules, noAds))
-                    list.Add((MessageType.Info, $"Không có rule nào có Value {state}."));
-                else if (res.errors.Count == 0)
+                    list.Add((MessageType.Info, $"Không có rule project nào có Value {state}."));
+                else if (res.errors.Count == 0 && builtInErrors.Count == 0)
                     list.Insert(0, (MessageType.Info, !apply
                         ? $"OK ({state}) — không sửa gì, chỉ kiểm tra."
                         : res.infos.Count == 0
