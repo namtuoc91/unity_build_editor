@@ -1,0 +1,37 @@
+# Unity (project nằm trong unity_build_editor/)
+unity_build_editor/[Ll]ibrary/
+unity_build_editor/[Tt]emp/
+unity_build_editor/[Oo]bj/
+unity_build_editor/[Bb]uild/
+unity_build_editor/[Bb]uilds/
+unity_build_editor/[Ll]ogs/
+unity_build_editor/[Uu]ser[Ss]ettings/
+unity_build_editor/[Mm]emoryCaptures/
+unity_build_editor/[Rr]ecordings/
+
+# IDE / generated
+.idea/
+.vs/
+.vscode/
+*.csproj
+*.sln
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# Build output
+*.apk
+*.aab
+*.unitypackage
+crashlytics-build.properties
+
+# OS
+.DS_Store
+Thumbs.db

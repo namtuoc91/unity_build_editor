@@ -1,0 +1,152 @@
+name: UPM Release
+
+# Đưa thư mục package (trừ Tests/) lên branch `upm` (package nằm ở root) và tạo tag `v<version>`
+# theo `version` trong package.json, để project khác import qua git URL:
+#   https://github.com/<owner>/<repo>.git#upm        (luôn mới nhất)
+#   https://github.com/<owner>/<repo>.git#v0.1.0     (pin version)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "unity_build_editor/Assets/UnityBuilder/**"
+  workflow_dispatch:
+    inputs:
+      force_retag:
+        description: "Tag đã tồn tại thì xóa và tạo lại (chỉ dùng khi cần sửa release lỗi)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: upm-release
+  cancel-in-progress: false
+
+env:
+  PKG_PATH: unity_build_editor/Assets/UnityBuilder
+  UPM_BRANCH: upm
+  # Path (tương đối trong package) KHÔNG đưa lên branch upm, cách nhau bằng dấu cách.
+  UPM_EXCLUDE: Tests Tests.meta
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read package.json
+        id: pkg
+        run: |
+          set -euo pipefail
+          file="$PKG_PATH/package.json"
+          [ -f "$file" ] || { echo "::error::Không tìm thấy $file"; exit 1; }
+          name=$(jq -r '.name' "$file")
+          version=$(jq -r '.version' "$file")
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error file=$file::version '$version' không đúng SemVer"; exit 1
+          fi
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+          echo "Package: $name@$version"
+
+      - name: Validate .meta files
+        run: |
+          set -euo pipefail
+          # Package git là immutable: file/folder thiếu .meta sẽ bị Unity bỏ qua.
+          missing=0
+          while IFS= read -r -d '' p; do
+            [ -e "$p.meta" ] || { echo "::error file=$p::Thiếu $p.meta"; missing=1; }
+          done < <(find "$PKG_PATH" -mindepth 1 \
+                     \( -name '.*' -o -name '*~' \) -prune -o \
+                     ! -name '*.meta' -print0)
+          while IFS= read -r -d '' m; do
+            [ -e "${m%.meta}" ] || { echo "::error file=$m::.meta mồ côi (không có file gốc)"; missing=1; }
+          done < <(find "$PKG_PATH" -name '*.meta' -print0)
+          [ "$missing" -eq 0 ] || exit 1
+          echo "OK: đủ .meta"
+
+      - name: Check tag
+        id: tag
+        env:
+          TAG: ${{ steps.pkg.outputs.tag }}
+          FORCE: ${{ inputs.force_retag || false }}
+        run: |
+          set -euo pipefail
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null; then
+            if [ "$FORCE" = "true" ]; then
+              echo "Tag $TAG đã có → sẽ tạo lại (force_retag)"
+              echo "create=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "::notice::Tag $TAG đã tồn tại → chỉ cập nhật branch $UPM_BRANCH. Bump version trong package.json để ra tag mới."
+              echo "create=false" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "create=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish package → branch upm
+        id: split
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Tree của package (ở root) trừ các path trong UPM_EXCLUDE, dựng bằng index tạm.
+          export GIT_INDEX_FILE="$RUNNER_TEMP/upm.index"
+          git read-tree "HEAD:$PKG_PATH"
+          for p in $UPM_EXCLUDE; do
+            git rm -r -q --cached --ignore-unmatch -- "$p"
+          done
+          tree=$(git write-tree)
+          unset GIT_INDEX_FILE
+
+          parent=""
+          if git ls-remote --exit-code --heads origin "$UPM_BRANCH" >/dev/null; then
+            git fetch -q origin "$UPM_BRANCH"
+            parent=$(git rev-parse FETCH_HEAD)
+          fi
+
+          if [ -n "$parent" ] && [ "$(git rev-parse "$parent^{tree}")" = "$tree" ]; then
+            sha="$parent"
+            echo "Nội dung package không đổi → giữ nguyên $UPM_BRANCH ($sha)"
+          else
+            sha=$(git commit-tree "$tree" ${parent:+-p "$parent"} \
+                  -m "${{ steps.pkg.outputs.name }} ${{ steps.pkg.outputs.version }}" \
+                  -m "Source: $GITHUB_SHA")
+            git push origin "$sha:refs/heads/$UPM_BRANCH"
+            echo "Branch $UPM_BRANCH → $sha"
+          fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+      - name: Create tag
+        if: steps.tag.outputs.create == 'true'
+        env:
+          TAG: ${{ steps.pkg.outputs.tag }}
+          SHA: ${{ steps.split.outputs.sha }}
+          NAME: ${{ steps.pkg.outputs.name }}
+          VERSION: ${{ steps.pkg.outputs.version }}
+        run: |
+          set -euo pipefail
+          git tag -f -a "$TAG" "$SHA" -m "$NAME $VERSION"
+          git push --force origin "refs/tags/$TAG"
+
+      - name: Summary
+        env:
+          TAG: ${{ steps.pkg.outputs.tag }}
+          CREATED: ${{ steps.tag.outputs.create }}
+          NAME: ${{ steps.pkg.outputs.name }}
+        run: |
+          url="https://github.com/${GITHUB_REPOSITORY}.git"
+          {
+            echo "## $NAME"
+            echo "- Branch \`$UPM_BRANCH\` → \`${{ steps.split.outputs.sha }}\`"
+            if [ "$CREATED" = "true" ]; then echo "- Tag \`$TAG\` đã tạo"; else echo "- Tag \`$TAG\` đã có, không tạo lại"; fi
+            echo ""
+            echo "Import (pin version): \`$url#$TAG\`"
+            echo ""
+            echo "Import (mới nhất): \`$url#$UPM_BRANCH\`"
+          } >> "$GITHUB_STEP_SUMMARY"
