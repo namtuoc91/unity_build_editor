@@ -9,7 +9,7 @@ Source nằm ở `unity_build_editor/Assets/UnityBuilder/`; GitHub Action tách 
 Package Manager → `+` → **Add package from git URL...**:
 
 ```
-https://github.com/namtuoc91/unity_build_editor.git#v0.0.7
+https://github.com/namtuoc91/unity_build_editor.git#v0.0.8
 ```
 
 Hoặc bản mới nhất: `https://github.com/namtuoc91/unity_build_editor.git#upm`
@@ -19,7 +19,7 @@ Hoặc thêm thẳng vào `Packages/manifest.json`:
 ```json
 {
   "dependencies": {
-    "com.raccoon.build-editor": "https://github.com/namtuoc91/unity_build_editor.git#v0.0.7"
+    "com.raccoon.build-editor": "https://github.com/namtuoc91/unity_build_editor.git#v0.0.8"
   }
 }
 ```
@@ -66,7 +66,8 @@ Dùng khi game có object cần đổi thêm biến theo No Ads (vd ẩn nút Re
 - Kéo GameObject từ Hierarchy (hoặc Component từ header Inspector) vào ô cạnh "Rule n" để tự điền; nút ▼ chọn object / component / property — scene chưa mở thì tool mở tạm (Additive) để đọc rồi đóng.
 - "Value Has Ads" áp cho Dev không bật No Ads **và Release** → nên điền cả 2 giá trị để build Release luôn đúng.
 - Build: mở từng scene → set qua `SerializedObject` → **save scene** (không restore), giống `_creativeMode`. Không tìm thấy object / component / property, parse sai giá trị hoặc đọc lại sai → **chặn build**.
-- Nút "Kiểm tra (No Ads)" / "Kiểm tra (có Ads)": chạy thử, báo giá trị hiện tại và giá trị sẽ set, không sửa gì.
+- Nút "Kiểm tra (No Ads / Has Ads)": chạy thử, báo giá trị hiện tại và giá trị sẽ set, không sửa gì.
+- Nút "Áp dụng + Save (No Ads / Has Ads)": set + save scene thật như lúc build nhưng **không build** → mở scene kiểm tra rồi mới Build.
 - Chưa cài adpack mà có rule → vẫn bật được No Ads (chỉ áp rule).
 
 ### Version code
