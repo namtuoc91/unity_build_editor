@@ -9,7 +9,7 @@ Source nằm ở `unity_build_editor/Assets/UnityBuilder/`; GitHub Action tách 
 Package Manager → `+` → **Add package from git URL...**:
 
 ```
-https://github.com/namtuoc91/unity_build_editor.git#v0.0.1
+https://github.com/namtuoc91/unity_build_editor.git#v0.0.2
 ```
 
 Hoặc bản mới nhất: `https://github.com/namtuoc91/unity_build_editor.git#upm`
@@ -19,7 +19,7 @@ Hoặc thêm thẳng vào `Packages/manifest.json`:
 ```json
 {
   "dependencies": {
-    "com.raccoon.build-editor": "https://github.com/namtuoc91/unity_build_editor.git#v0.0.1"
+    "com.raccoon.build-editor": "https://github.com/namtuoc91/unity_build_editor.git#v0.0.2"
   }
 }
 ```
@@ -30,7 +30,7 @@ Menu **Tools → Raccoon → Android Build**.
 | Phần | Nội dung |
 |---|---|
 | Preset bar | Chọn / thêm / duplicate / xóa preset (mặc định Dev + Release). Đổi tên ở mục App. |
-| App | App ID (theo preset), Version, Version Code (−/+), Auto-increment |
+| App | App Name + Icon (kéo thả texture → set Default Icon + clear icon Android Adaptive/Round/Legacy), App ID (theo preset), Version, Version Code (−/+), Auto-increment |
 | Build | Mode, Development Build (+ Script Debugging / Profiler), No Ads, Use Test Ad, Clean cache, App Bundle size warning |
 | Signing | Keystore path + alias (lưu config), password (chỉ SessionState) |
 | Scenes | Danh sách scene build, đồng bộ với Build Settings |

@@ -196,7 +196,7 @@ namespace Raccoon.BuildEditor
         void DrawApp(BuildPreset p)
         {
             p.name = EditorGUILayout.TextField("Tên preset", p.name);
-            EditorGUILayout.LabelField("Product Name", PlayerSettings.productName);
+            DrawAppIdentity();
             p.appId = EditorGUILayout.TextField("App ID", p.appId);
             _config.version = EditorGUILayout.TextField("Version", _config.version);
 
@@ -216,6 +216,46 @@ namespace Raccoon.BuildEditor
             }
 
             p.autoIncrement = EditorGUILayout.Toggle(new GUIContent("Auto-increment", "Tăng version code +1 trước mỗi build"), p.autoIncrement);
+        }
+
+        /// <summary>Tên app + icon: ghi thẳng vào PlayerSettings (dùng chung mọi preset).</summary>
+        void DrawAppIdentity()
+        {
+            var name = EditorGUILayout.DelayedTextField(new GUIContent("App Name", "PlayerSettings.productName"),
+                PlayerSettings.productName);
+            if (name != PlayerSettings.productName && !string.IsNullOrWhiteSpace(name))
+            {
+                PlayerSettings.productName = name.Trim();
+                AssetDatabase.SaveAssets();
+            }
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                var current = AppIconService.GetDefaultIcon();
+                EditorGUILayout.PrefixLabel(new GUIContent("Icon", "Kéo thả texture vào ô. Set Default Icon + clear icon Android Adaptive/Round/Legacy."));
+                var icon = (Texture2D)EditorGUILayout.ObjectField(current, typeof(Texture2D), false,
+                    GUILayout.Width(64), GUILayout.Height(64));
+                if (icon != current && icon != null)
+                {
+                    AppIconService.SetIcon(icon);
+                    Debug.Log($"[RaccoonBuild] Đã set icon app: {AssetDatabase.GetAssetPath(icon)}");
+                }
+
+                using (new EditorGUILayout.VerticalScope())
+                {
+                    var warn = AppIconService.CheckTexture(icon ?? current);
+                    if (warn != null) EditorGUILayout.HelpBox(warn, MessageType.Warning);
+                    if (AppIconService.HasAndroidOverrides())
+                    {
+                        EditorGUILayout.HelpBox("Còn icon Android Adaptive/Round/Legacy đang che Default Icon.", MessageType.Info);
+                        if (GUILayout.Button("Clear icon Android", GUILayout.Width(140)))
+                        {
+                            AppIconService.ClearAndroidOverrides();
+                            AssetDatabase.SaveAssets();
+                        }
+                    }
+                }
+            }
         }
 
         void DrawBuild(BuildPreset p)

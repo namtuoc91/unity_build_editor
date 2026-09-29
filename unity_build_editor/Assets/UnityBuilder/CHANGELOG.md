@@ -2,6 +2,11 @@
 
 Format theo [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), version theo [SemVer](https://semver.org/).
 
+## [0.0.2] - 2026-09-29
+### Added
+- Mục App: sửa App Name (`PlayerSettings.productName`) và Icon (kéo thả texture).
+- Kéo icon → set Default Icon + clear mọi icon Android Adaptive/Round/Legacy để tránh override cũ gây lỗi; nút "Clear icon Android" khi còn sót.
+
 ## [0.0.1] - 2026-09-29
 ### Added
 - EditorWindow `Tools/Raccoon/Android Build`.
