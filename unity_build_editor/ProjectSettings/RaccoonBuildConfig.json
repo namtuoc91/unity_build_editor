@@ -1,0 +1,43 @@
+{
+    "version": "1.0",
+    "versionCode": 1,
+    "keystorePath": "",
+    "keystoreAlias": "",
+    "outputFolder": "Builds/Android",
+    "appBundleSizeWarningMB": 210,
+    "scenes": [
+        {
+            "path": "Assets/Scenes/SampleScene.unity",
+            "enabled": true
+        }
+    ],
+    "presets": [
+        {
+            "name": "Dev",
+            "appId": "com.DefaultCompany.unity_build_editor",
+            "mode": 0,
+            "developmentBuild": false,
+            "scriptDebugging": false,
+            "autoconnectProfiler": false,
+            "noAds": false,
+            "useTestAd": false,
+            "cleanCache": false,
+            "autoIncrement": false,
+            "fileNameTemplate": "{product}_{version}_{code}_{date}_{time}_{mode}{noads}"
+        },
+        {
+            "name": "Release",
+            "appId": "com.DefaultCompany.unity_build_editor",
+            "mode": 0,
+            "developmentBuild": false,
+            "scriptDebugging": false,
+            "autoconnectProfiler": false,
+            "noAds": false,
+            "useTestAd": false,
+            "cleanCache": false,
+            "autoIncrement": true,
+            "fileNameTemplate": "{product}_{version}_{code}_{date}_{time}_{mode}{noads}"
+        }
+    ],
+    "activePresetIndex": 1
+}
