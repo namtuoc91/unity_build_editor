@@ -2,7 +2,7 @@
 
 Format theo [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), version theo [SemVer](https://semver.org/).
 
-## [0.1.0] - Unreleased
+## [0.0.1] - 2026-09-29
 ### Added
 - EditorWindow `Tools/Raccoon/Android Build`.
 - Config chung `ProjectSettings/RaccoonBuildConfig.json`: version, version code, keystore, output folder, scene list.

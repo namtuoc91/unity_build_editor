@@ -6,7 +6,7 @@ Repo dev UPM package `com.raccoon.build-editor` (Unity 6). Source package: `unit
 Package Manager → `+` → **Add package from git URL...**
 
 ```
-https://github.com/namtuoc91/unity_build_editor.git#v0.1.0   # pin version (khuyên dùng)
+https://github.com/namtuoc91/unity_build_editor.git#v0.0.1   # pin version (khuyên dùng)
 https://github.com/namtuoc91/unity_build_editor.git#upm      # luôn bản mới nhất
 ```
 

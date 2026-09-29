@@ -9,7 +9,7 @@ Source nằm ở `unity_build_editor/Assets/UnityBuilder/`; GitHub Action tách 
 Package Manager → `+` → **Add package from git URL...**:
 
 ```
-https://github.com/namtuoc91/unity_build_editor.git#v0.1.0
+https://github.com/namtuoc91/unity_build_editor.git#v0.0.1
 ```
 
 Hoặc bản mới nhất: `https://github.com/namtuoc91/unity_build_editor.git#upm`
@@ -19,7 +19,7 @@ Hoặc thêm thẳng vào `Packages/manifest.json`:
 ```json
 {
   "dependencies": {
-    "com.raccoon.build-editor": "https://github.com/namtuoc91/unity_build_editor.git#v0.1.0"
+    "com.raccoon.build-editor": "https://github.com/namtuoc91/unity_build_editor.git#v0.0.1"
   }
 }
 ```

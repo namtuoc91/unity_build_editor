@@ -3,7 +3,7 @@ name: UPM Release
 # Đưa thư mục package (trừ Tests/) lên branch `upm` (package nằm ở root) và tạo tag `v<version>`
 # theo `version` trong package.json, để project khác import qua git URL:
 #   https://github.com/<owner>/<repo>.git#upm        (luôn mới nhất)
-#   https://github.com/<owner>/<repo>.git#v0.1.0     (pin version)
+#   https://github.com/<owner>/<repo>.git#v0.0.1     (pin version)
 
 on:
   push:
