@@ -9,7 +9,7 @@ Source nằm ở `unity_build_editor/Assets/UnityBuilder/`; GitHub Action tách 
 Package Manager → `+` → **Add package from git URL...**:
 
 ```
-https://github.com/namtuoc91/unity_build_editor.git#v0.0.6
+https://github.com/namtuoc91/unity_build_editor.git#v0.0.7
 ```
 
 Hoặc bản mới nhất: `https://github.com/namtuoc91/unity_build_editor.git#upm`
@@ -19,7 +19,7 @@ Hoặc thêm thẳng vào `Packages/manifest.json`:
 ```json
 {
   "dependencies": {
-    "com.raccoon.build-editor": "https://github.com/namtuoc91/unity_build_editor.git#v0.0.6"
+    "com.raccoon.build-editor": "https://github.com/namtuoc91/unity_build_editor.git#v0.0.7"
   }
 }
 ```
@@ -53,7 +53,7 @@ Menu **Tools → Raccoon → Android Build**.
 - Tool **sửa thật + save** scene trong build list và asset `AdsScriptableObj`, không restore sau build.
 
 ### No Ads Rules (riêng từng project)
-Dùng khi game có object cần đổi thêm biến theo No Ads (vd ẩn nút Remove Ads, tắt banner placeholder). Chỉ hiện dưới checkbox No Ads khi bật (Dev). Lưu trong `RaccoonBuildConfig.json` (dùng chung mọi preset) nên set 1 lần, lần sau không phải set lại; tắt No Ads thì rule vẫn còn và vẫn áp giá trị "Khi có Ads".
+Dùng khi game có object cần đổi thêm biến theo No Ads (vd ẩn nút Remove Ads, tắt banner placeholder). Chỉ hiện dưới checkbox No Ads khi bật (Dev). Lưu trong `RaccoonBuildConfig.json` (dùng chung mọi preset) nên set 1 lần, lần sau không phải set lại; tắt No Ads thì rule vẫn còn và vẫn áp giá trị "Value Has Ads".
 
 | Field | Ý nghĩa |
 |---|---|
@@ -61,10 +61,10 @@ Dùng khi game có object cần đổi thêm biến theo No Ads (vd ẩn nút Re
 | Object path | Đường dẫn hierarchy từ root, vd `Canvas/Shop/BtnRemoveAds` (trùng tên → áp cho tất cả). ▼ = chọn theo hierarchy của scene đã chọn |
 | Component | Tên type ngắn/full; rỗng hoặc `GameObject` = chính GameObject (vd property `m_IsActive`) |
 | Property | SerializedProperty path (`_hideRemoveAds`, `m_IsActive`…), chỉ bool / int / float / string / enum |
-| Khi No Ads / Khi có Ads | Giá trị ghi vào. Chọn Property bằng ▼ → ô nhập theo kiểu: bool = dropdown true/false, enum = dropdown tên, int/float = checkbox "Đổi" + ô số, string = ô text. "(không đụng)" / bỏ tick / rỗng = không đụng. Gõ Property tay → ô text (`true`/`false`, số dấu chấm, tên enum) |
+| Value No Ads / Value Has Ads | Giá trị ghi vào. Chọn Property bằng ▼ → ô nhập theo kiểu: bool = dropdown true/false, enum = dropdown tên, int/float = checkbox "Đổi" + ô số, string = ô text. "(không đụng)" / bỏ tick / rỗng = không đụng. Gõ Property tay → ô text (`true`/`false`, số dấu chấm, tên enum) |
 
 - Kéo GameObject từ Hierarchy (hoặc Component từ header Inspector) vào ô cạnh "Rule n" để tự điền; nút ▼ chọn object / component / property — scene chưa mở thì tool mở tạm (Additive) để đọc rồi đóng.
-- "Khi có Ads" áp cho Dev không bật No Ads **và Release** → nên điền cả 2 giá trị để build Release luôn đúng.
+- "Value Has Ads" áp cho Dev không bật No Ads **và Release** → nên điền cả 2 giá trị để build Release luôn đúng.
 - Build: mở từng scene → set qua `SerializedObject` → **save scene** (không restore), giống `_creativeMode`. Không tìm thấy object / component / property, parse sai giá trị hoặc đọc lại sai → **chặn build**.
 - Nút "Kiểm tra (No Ads)" / "Kiểm tra (có Ads)": chạy thử, báo giá trị hiện tại và giá trị sẽ set, không sửa gì.
 - Chưa cài adpack mà có rule → vẫn bật được No Ads (chỉ áp rule).

@@ -2,6 +2,10 @@
 
 Format theo [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), version theo [SemVer](https://semver.org/).
 
+## [0.0.7] - 2026-09-29
+### Changed
+- Đổi nhãn ô giá trị No Ads Rule: "Khi No Ads" → **Value No Ads**, "Khi có Ads" → **Value Has Ads** (field config giữ nguyên).
+
 ## [0.0.6] - 2026-09-29
 ### Added
 - No Ads Rules riêng từng project (lưu trong `RaccoonBuildConfig.json`): set field bool/int/float/string/enum của GameObject/Component trong scene theo cờ No Ads, save scene khi build; lỗi resolve/parse chặn build.

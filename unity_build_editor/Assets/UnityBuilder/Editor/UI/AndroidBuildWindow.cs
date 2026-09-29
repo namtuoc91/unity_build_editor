@@ -313,7 +313,7 @@ namespace Raccoon.BuildEditor
             else if (hasRules)
             {
                 EditorGUILayout.LabelField(" ",
-                    $"{_config.noAdsRules.Count(r => r.enabled)} No Ads rule → áp giá trị 'Khi có Ads' (bật No Ads để sửa rule)",
+                    $"{_config.noAdsRules.Count(r => r.enabled)} No Ads rule → áp giá trị 'Value Has Ads' (bật No Ads để sửa rule)",
                     EditorStyles.miniLabel);
             }
 
@@ -419,7 +419,7 @@ namespace Raccoon.BuildEditor
         void DrawNoAdsRules()
         {
             EditorGUILayout.HelpBox(
-                "Set field của object trong scene theo cờ No Ads (mọi preset, cả Release = 'Khi có Ads'). Value rỗng = không đụng.\n" +
+                "Set field của object trong scene theo cờ No Ads (mọi preset, cả Release = 'Value Has Ads'). Value rỗng = không đụng.\n" +
                 "Kéo GameObject (Hierarchy) hoặc Component (header Inspector) vào ô bên cạnh 'Rule n' để tự điền. " +
                 "Nút ▼ chọn scene / object / component / property (scene chưa mở thì tự mở tạm để đọc).", MessageType.None);
 
@@ -471,8 +471,8 @@ namespace Raccoon.BuildEditor
                             if (GUILayout.Button("▼", GUILayout.Width(22))) ShowPropertyMenu(r);
                         }
 
-                        r.noAdsValue = DrawRuleValue(new GUIContent("Khi No Ads", "Giá trị ghi khi build Dev bật No Ads"), r, r.noAdsValue);
-                        r.adsValue = DrawRuleValue(new GUIContent("Khi có Ads", "Giá trị ghi khi build Dev không No Ads + Release"), r, r.adsValue);
+                        r.noAdsValue = DrawRuleValue(new GUIContent("Value No Ads", "Giá trị ghi khi build Dev bật No Ads"), r, r.noAdsValue);
+                        r.adsValue = DrawRuleValue(new GUIContent("Value Has Ads", "Giá trị ghi khi build Dev không No Ads + Release"), r, r.adsValue);
                         if (string.IsNullOrEmpty(r.valueType) && !string.IsNullOrEmpty(r.property))
                             EditorGUILayout.LabelField(" ", "Chọn Property bằng ▼ để có ô nhập đúng kiểu (checkbox / dropdown / số).", EditorStyles.miniLabel);
                     }
