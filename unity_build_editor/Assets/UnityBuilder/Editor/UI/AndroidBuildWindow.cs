@@ -10,7 +10,6 @@ namespace Raccoon.BuildEditor
 {
     public class AndroidBuildWindow : EditorWindow
     {
-        static readonly string[] Tabs = { "Devices", "History" };
         const float IconFieldSize = 96f;
 
         BuildConfig _config;
@@ -22,6 +21,7 @@ namespace Raccoon.BuildEditor
         bool _loadingDevices;
         string _selectedSerial;
         string _adbStatus;
+        List<(MessageType type, string text)> _ruleCheck;
 
         Vector2 _scroll;
         int _tab;
@@ -127,9 +127,11 @@ namespace Raccoon.BuildEditor
                 DrawLastOutcome();
 
                 EditorGUILayout.Space();
-                _tab = GUILayout.Toolbar(_tab, Tabs);
+                var apkCount = _history.entries.Count(e => !e.isAab);
+                var aabCount = _history.entries.Count - apkCount;
+                _tab = GUILayout.Toolbar(_tab, new[] { "Devices", $"History APK ({apkCount})", $"History AAB ({aabCount})" });
                 if (_tab == 0) DrawDevices();
-                else DrawHistory();
+                else DrawHistory(_tab == 2);
 
                 EditorGUILayout.EndScrollView();
             }
@@ -284,20 +286,36 @@ namespace Raccoon.BuildEditor
             }
 
             var adPack = AdsSettingApplier.IsAdPackInstalled;
-            using (new EditorGUI.DisabledScope(release || !adPack))
+            var hasRules = _config.noAdsRules.Any(r => r.enabled);
+            using (new EditorGUI.DisabledScope(release))
             {
                 using (new EditorGUILayout.HorizontalScope())
                 {
                     p.noAds = EditorGUILayout.ToggleLeft("No Ads (creative mode)", p.noAds && !release, GUILayout.Width(200));
-                    using (new EditorGUI.DisabledScope(p.noAds))
+                    using (new EditorGUI.DisabledScope(p.noAds || !adPack))
                         p.useTestAd = EditorGUILayout.ToggleLeft("Use Test Ad", p.useTestAd && !release);
                 }
             }
 
             if (!adPack)
-                EditorGUILayout.HelpBox("Chưa cài com.raccoon.adpack → No Ads / Use Test Ad bị khóa.", MessageType.None);
+                EditorGUILayout.HelpBox("Chưa cài com.raccoon.adpack → No Ads chỉ áp No Ads Rules; Use Test Ad bị khóa.", MessageType.None);
             else if (release)
                 EditorGUILayout.HelpBox("Release: luôn ép _creativeMode = false và use_test_ad = false (sửa + save scene/asset).", MessageType.None);
+
+            // Rule chỉ hiện khi bật No Ads; lưu ở config chung nên các lần sau / preset khác dùng lại.
+            if (p.noAds && !release)
+            {
+                EditorGUI.indentLevel++;
+                EditorGUILayout.LabelField($"No Ads Rules ({_config.noAdsRules.Count(r => r.enabled)})", EditorStyles.boldLabel);
+                DrawNoAdsRules();
+                EditorGUI.indentLevel--;
+            }
+            else if (hasRules)
+            {
+                EditorGUILayout.LabelField(" ",
+                    $"{_config.noAdsRules.Count(r => r.enabled)} No Ads rule → áp giá trị 'Khi có Ads' (bật No Ads để sửa rule)",
+                    EditorStyles.miniLabel);
+            }
 
             p.cleanCache = EditorGUILayout.Toggle("Clean Build Cache", p.cleanCache);
             _config.appBundleSizeWarningMB = Mathf.Max(0, EditorGUILayout.IntField(
@@ -394,6 +412,392 @@ namespace Raccoon.BuildEditor
                 _config.ApplyScenesToBuildSettings();
                 GUI.changed = true;
             }
+        }
+
+        // ---- No Ads Rules ----
+
+        void DrawNoAdsRules()
+        {
+            EditorGUILayout.HelpBox(
+                "Set field của object trong scene theo cờ No Ads (mọi preset, cả Release = 'Khi có Ads'). Value rỗng = không đụng.\n" +
+                "Kéo GameObject (Hierarchy) hoặc Component (header Inspector) vào ô bên cạnh 'Rule n' để tự điền. " +
+                "Nút ▼ chọn scene / object / component / property (scene chưa mở thì tự mở tạm để đọc).", MessageType.None);
+
+            var rules = _config.noAdsRules;
+            for (var i = 0; i < rules.Count; i++)
+            {
+                var r = rules[i];
+                using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+                {
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        r.enabled = EditorGUILayout.ToggleLeft($"Rule {i + 1}", r.enabled, GUILayout.Width(80));
+                        var picked = EditorGUILayout.ObjectField(GUIContent.none, null, typeof(Object), true);
+                        if (picked != null && FillRuleFromPick(r, picked)) GUI.changed = true;
+                        if (GUILayout.Button("✕", GUILayout.Width(22)))
+                        {
+                            rules.RemoveAt(i);
+                            GUI.changed = true;
+                            break;
+                        }
+                    }
+
+                    using (new EditorGUI.DisabledScope(!r.enabled))
+                    {
+                        DrawRuleScene(r);
+                        using (new EditorGUILayout.HorizontalScope())
+                        {
+                            r.objectPath = EditorGUILayout.TextField(new GUIContent("Object path", "Đường dẫn hierarchy từ root, vd Canvas/Shop/BtnRemoveAds"), r.objectPath);
+                            if (GUILayout.Button("▼", GUILayout.Width(22))) ShowObjectMenu(r);
+                        }
+                        using (new EditorGUILayout.HorizontalScope())
+                        {
+                            r.componentType = EditorGUILayout.TextField(new GUIContent("Component", "Tên type (ngắn hoặc full). Rỗng / GameObject = chính GameObject"), r.componentType);
+                            if (GUILayout.Button("▼", GUILayout.Width(22))) ShowComponentMenu(r);
+                        }
+
+                        using (new EditorGUILayout.HorizontalScope())
+                        {
+                            var prop = EditorGUILayout.TextField(new GUIContent("Property",
+                                "SerializedProperty path, vd _hideRemoveAds, m_IsActive" +
+                                (string.IsNullOrEmpty(r.valueType) ? "" : $"\nKiểu: {r.valueType}")), r.property);
+                            if (prop != r.property)
+                            {
+                                // Gõ tay → không biết kiểu nữa, quay về ô text.
+                                r.property = prop;
+                                r.valueType = "";
+                                r.enumNames.Clear();
+                            }
+                            if (GUILayout.Button("▼", GUILayout.Width(22))) ShowPropertyMenu(r);
+                        }
+
+                        r.noAdsValue = DrawRuleValue(new GUIContent("Khi No Ads", "Giá trị ghi khi build Dev bật No Ads"), r, r.noAdsValue);
+                        r.adsValue = DrawRuleValue(new GUIContent("Khi có Ads", "Giá trị ghi khi build Dev không No Ads + Release"), r, r.adsValue);
+                        if (string.IsNullOrEmpty(r.valueType) && !string.IsNullOrEmpty(r.property))
+                            EditorGUILayout.LabelField(" ", "Chọn Property bằng ▼ để có ô nhập đúng kiểu (checkbox / dropdown / số).", EditorStyles.miniLabel);
+                    }
+                }
+            }
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                if (GUILayout.Button("+ Thêm rule"))
+                {
+                    rules.Add(new NoAdsRule());
+                    GUI.changed = true;
+                }
+
+                using (new EditorGUI.DisabledScope(rules.Count == 0))
+                {
+                    if (GUILayout.Button("Kiểm tra (No Ads)")) EditorApplication.delayCall += () => CheckNoAdsRules(true);
+                    if (GUILayout.Button("Kiểm tra (có Ads)")) EditorApplication.delayCall += () => CheckNoAdsRules(false);
+                }
+            }
+
+            if (_ruleCheck != null)
+                foreach (var (type, text) in _ruleCheck)
+                    EditorGUILayout.HelpBox(text, type);
+        }
+
+        /// <summary>Chọn scene trong project (kéo thả / picker / ▼); trống = mọi scene build list.</summary>
+        void DrawRuleScene(NoAdsRule r)
+        {
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                var current = string.IsNullOrEmpty(r.scenePath) ? null : AssetDatabase.LoadAssetAtPath<SceneAsset>(r.scenePath);
+                var label = new GUIContent("Scene", "Trống = mọi scene trong build list");
+                var picked = (SceneAsset)EditorGUILayout.ObjectField(label, current, typeof(SceneAsset), false);
+                if (picked != current)
+                {
+                    r.scenePath = picked != null ? AssetDatabase.GetAssetPath(picked) : "";
+                    GUI.changed = true;
+                }
+
+                if (GUILayout.Button("▼", GUILayout.Width(22))) ShowSceneMenu(r);
+            }
+
+            if (string.IsNullOrEmpty(r.scenePath))
+                EditorGUILayout.LabelField(" ", "(mọi scene trong build list)", EditorStyles.miniLabel);
+            else if (AssetDatabase.LoadAssetAtPath<SceneAsset>(r.scenePath) == null)
+                EditorGUILayout.HelpBox($"Scene không tồn tại: {r.scenePath}", MessageType.Warning);
+            else if (!_config.EnabledScenePaths.Contains(r.scenePath))
+                EditorGUILayout.HelpBox("Scene không nằm trong build list → rule bị bỏ qua khi build.", MessageType.Warning);
+        }
+
+        void ShowSceneMenu(NoAdsRule r)
+        {
+            var menu = new GenericMenu();
+            menu.AddItem(new GUIContent("Mọi scene build list"), string.IsNullOrEmpty(r.scenePath),
+                () => SetRule(() => r.scenePath = ""));
+            menu.AddSeparator("");
+            var build = _config.EnabledScenePaths;
+            var all = AssetDatabase.FindAssets("t:Scene", new[] { "Assets" })
+                .Select(AssetDatabase.GUIDToAssetPath)
+                .OrderBy(x => build.Contains(x) ? 0 : 1).ThenBy(x => x);
+            foreach (var path in all)
+            {
+                var group = build.Contains(path) ? "Build list" : "Khác";
+                // GenericMenu tách submenu theo '/', thay bằng ký tự giống để giữ nguyên đường dẫn.
+                menu.AddItem(new GUIContent($"{group}/{path.Replace('/', '\u2215')}"), r.scenePath == path,
+                    () => SetRule(() => r.scenePath = path));
+            }
+
+            menu.ShowAsContext();
+        }
+
+        /// <summary>
+        /// Chạy action trên scene của rule (trống = các scene đang mở). Scene chưa mở thì mở Additive để đọc rồi đóng lại.
+        /// Trả false nếu scene không tồn tại.
+        /// </summary>
+        bool WithRuleScenes(NoAdsRule r, System.Action<List<UnityEngine.SceneManagement.Scene>> action)
+        {
+            var scenes = new List<UnityEngine.SceneManagement.Scene>();
+            UnityEngine.SceneManagement.Scene? opened = null;
+            if (string.IsNullOrEmpty(r.scenePath))
+            {
+                for (var i = 0; i < EditorSceneManager.sceneCount; i++)
+                    if (EditorSceneManager.GetSceneAt(i).isLoaded) scenes.Add(EditorSceneManager.GetSceneAt(i));
+            }
+            else
+            {
+                var scene = EditorSceneManager.GetSceneByPath(r.scenePath);
+                if (!scene.IsValid() || !scene.isLoaded)
+                {
+                    if (AssetDatabase.LoadAssetAtPath<SceneAsset>(r.scenePath) == null)
+                    {
+                        ShowNotification(new GUIContent("Scene không tồn tại"));
+                        return false;
+                    }
+
+                    scene = EditorSceneManager.OpenScene(r.scenePath, OpenSceneMode.Additive);
+                    opened = scene;
+                }
+
+                scenes.Add(scene);
+            }
+
+            try
+            {
+                action(scenes);
+            }
+            finally
+            {
+                if (opened.HasValue) EditorSceneManager.CloseScene(opened.Value, true);
+            }
+
+            return true;
+        }
+
+        void ShowObjectMenu(NoAdsRule r)
+        {
+            var menu = new GenericMenu();
+            if (!WithRuleScenes(r, scenes =>
+                {
+                    foreach (var scene in scenes)
+                    {
+                        // Nhiều scene → thêm cấp tên scene; 1 scene thì hiện thẳng hierarchy.
+                        var prefix = scenes.Count > 1 ? scene.name + "/" : "";
+                        var scenePath = scene.path;
+                        var multi = scenes.Count > 1;
+                        foreach (var t in scene.GetRootGameObjects().SelectMany(g => g.GetComponentsInChildren<Transform>(true)))
+                        {
+                            var path = NoAdsRuleApplier.HierarchyPath(t);
+                            // Node có con là submenu → thêm mục "● tên" ở đầu submenu để chọn chính nó.
+                            var text = t.childCount > 0 ? $"{prefix}{path}/● {t.name}" : prefix + path;
+                            menu.AddItem(new GUIContent(text), r.objectPath == path && NoAdsRuleApplier.AppliesToScene(r, scenePath),
+                                () => SetRule(() =>
+                                {
+                                    r.objectPath = path;
+                                    if (string.IsNullOrEmpty(r.scenePath) && multi) r.scenePath = scenePath;
+                                }));
+                        }
+                    }
+                })) return;
+
+            if (menu.GetItemCount() == 0) menu.AddDisabledItem(new GUIContent("Không có object (mở scene hoặc chọn Scene trước)"));
+            menu.ShowAsContext();
+        }
+
+        bool FillRuleFromPick(NoAdsRule r, Object picked)
+        {
+            var comp = picked as Component;
+            var go = comp != null ? comp.gameObject : picked as GameObject;
+            if (go == null || !go.scene.IsValid() || string.IsNullOrEmpty(go.scene.path))
+            {
+                ShowNotification(new GUIContent("Chỉ nhận GameObject/Component trong scene đã save"));
+                return false;
+            }
+
+            r.scenePath = go.scene.path;
+            r.objectPath = NoAdsRuleApplier.HierarchyPath(go.transform);
+            r.componentType = comp != null ? comp.GetType().FullName : NoAdsRule.GameObjectType;
+            r.property = "";
+            r.valueType = "";
+            r.enumNames.Clear();
+            return true;
+        }
+
+        /// <summary>Chạy action trên GameObject khớp rule (mở tạm scene nếu cần).</summary>
+        void WithRuleObject(NoAdsRule r, System.Action<GameObject> action)
+        {
+            var probe = new NoAdsRule { objectPath = r.objectPath };
+            var found = false;
+            WithRuleScenes(r, scenes =>
+            {
+                var go = scenes.Select(sc => NoAdsRuleApplier.FindTargets(sc, probe, out _).FirstOrDefault() as GameObject)
+                    .FirstOrDefault(g => g != null);
+                if (go == null) return;
+                found = true;
+                action(go);
+            });
+            if (!found) ShowNotification(new GUIContent("Không tìm thấy object (chọn Scene + Object path trước)"));
+        }
+
+        void ShowComponentMenu(NoAdsRule r)
+        {
+            var menu = new GenericMenu();
+            WithRuleObject(r, go =>
+            {
+                menu.AddItem(new GUIContent(NoAdsRule.GameObjectType), NoAdsRuleApplier.TargetsGameObject(r),
+                    () => SetRule(() => r.componentType = NoAdsRule.GameObjectType));
+                foreach (var c in go.GetComponents<Component>().Where(c => c != null))
+                {
+                    var name = c.GetType().FullName;
+                    menu.AddItem(new GUIContent(name), r.componentType == name, () => SetRule(() => r.componentType = name));
+                }
+            });
+            if (menu.GetItemCount() > 0) menu.ShowAsContext();
+        }
+
+        void ShowPropertyMenu(NoAdsRule r)
+        {
+            var menu = new GenericMenu();
+            var hasObject = false;
+            WithRuleObject(r, go =>
+            {
+                hasObject = true;
+                Object target = go;
+                if (!NoAdsRuleApplier.TargetsGameObject(r))
+                {
+                    target = go.GetComponents<Component>().FirstOrDefault(c =>
+                        c != null && (c.GetType().FullName == r.componentType || c.GetType().Name == r.componentType));
+                    if (target == null)
+                    {
+                        menu.AddDisabledItem(new GUIContent($"Object không có component {r.componentType}"));
+                        return;
+                    }
+                }
+
+                var props = NoAdsRuleApplier.ListProperties(target);
+                if (props.Count == 0) menu.AddDisabledItem(new GUIContent("Không có field bool/int/float/string/enum"));
+                foreach (var pi in props)
+                    menu.AddItem(new GUIContent($"{pi.path}  —  {pi.label}"), r.property == pi.path, () => SetRule(() =>
+                    {
+                        var typeChanged = r.valueType != pi.type.ToString();
+                        r.property = pi.path;
+                        r.valueType = pi.type.ToString();
+                        r.enumNames = pi.enumNames.ToList();
+                        if (typeChanged) r.noAdsValue = r.adsValue = ""; // giá trị cũ có thể sai kiểu
+                    }));
+            });
+            if (hasObject) menu.ShowAsContext();
+        }
+
+        static readonly string[] BoolOptions = { "(không đụng)", "true", "false" };
+        const string NoTouch = "(không đụng)";
+
+        /// <summary>Ô nhập theo kiểu property; "" = không đụng.</summary>
+        static string DrawRuleValue(GUIContent label, NoAdsRule r, string value)
+        {
+            var inv = System.Globalization.CultureInfo.InvariantCulture;
+            switch (r.valueType)
+            {
+                case nameof(SerializedPropertyType.Boolean):
+                {
+                    var idx = string.IsNullOrEmpty(value) || !NoAdsRuleApplier.TryParseBool(value, out var b) ? 0 : b ? 1 : 2;
+                    idx = EditorGUILayout.Popup(label, idx, BoolOptions);
+                    return idx == 0 ? "" : BoolOptions[idx];
+                }
+                case nameof(SerializedPropertyType.Enum):
+                {
+                    var names = r.enumNames.ToArray();
+                    var options = new[] { NoTouch }.Concat(names).ToArray();
+                    var idx = string.IsNullOrEmpty(value) ? 0 : NoAdsRuleApplier.EnumIndex(names, null, value) + 1;
+                    idx = EditorGUILayout.Popup(label, idx, options);
+                    return idx <= 0 ? "" : names[idx - 1];
+                }
+                case nameof(SerializedPropertyType.Integer):
+                case nameof(SerializedPropertyType.Float):
+                {
+                    var isInt = r.valueType == nameof(SerializedPropertyType.Integer);
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        var set = !string.IsNullOrEmpty(value);
+                        EditorGUILayout.PrefixLabel(label);
+                        var indent = EditorGUI.indentLevel;
+                        EditorGUI.indentLevel = 0;
+                        set = EditorGUILayout.ToggleLeft("Đổi", set, GUILayout.Width(50));
+                        string result = "";
+                        using (new EditorGUI.DisabledScope(!set))
+                        {
+                            if (isInt)
+                            {
+                                long.TryParse(value, System.Globalization.NumberStyles.Integer, inv, out var l);
+                                l = EditorGUILayout.LongField(l);
+                                if (set) result = l.ToString(inv);
+                            }
+                            else
+                            {
+                                double.TryParse(value, System.Globalization.NumberStyles.Float, inv, out var d);
+                                d = EditorGUILayout.DoubleField(d);
+                                if (set) result = d.ToString(inv);
+                            }
+                        }
+
+                        EditorGUI.indentLevel = indent;
+                        return result;
+                    }
+                }
+                default:
+                    return EditorGUILayout.TextField(new GUIContent(label.text,
+                        label.tooltip + ". bool: true/false · số (dấu chấm) · chuỗi · tên enum. Rỗng = không đụng"), value);
+            }
+        }
+
+        void SetRule(System.Action change)
+        {
+            change();
+            SaveConfig();
+            Repaint();
+        }
+
+        void CheckNoAdsRules(bool noAds)
+        {
+            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+            var setup = EditorSceneManager.GetSceneManagerSetup();
+            var list = new List<(MessageType, string)>();
+            try
+            {
+                var res = NoAdsRuleApplier.Apply(_config.noAdsRules, noAds, _config.EnabledScenePaths, true);
+                list.AddRange(res.errors.Select(e => (MessageType.Error, e)));
+                list.AddRange(res.warnings.Select(w => (MessageType.Warning, w)));
+                list.AddRange(res.infos.Select(i => (MessageType.Info, i)));
+                if (list.Count == 0)
+                    list.Add((MessageType.Info, $"Không có rule nào có giá trị cho trạng thái {(noAds ? "No Ads" : "có Ads")}."));
+                else if (res.errors.Count == 0)
+                    list.Insert(0, (MessageType.Info, $"OK ({(noAds ? "No Ads" : "có Ads")}) — không sửa gì, chỉ kiểm tra."));
+            }
+            catch (System.Exception e)
+            {
+                list.Add((MessageType.Error, e.Message));
+            }
+            finally
+            {
+                if (setup != null && setup.Length > 0) EditorSceneManager.RestoreSceneManagerSetup(setup);
+            }
+
+            _ruleCheck = list;
+            Repaint();
         }
 
         void DrawOutput(BuildPreset p)
@@ -607,18 +1011,20 @@ namespace Raccoon.BuildEditor
             if (!string.IsNullOrEmpty(_adbStatus)) EditorGUILayout.LabelField(_adbStatus, EditorStyles.miniLabel);
         }
 
-        void DrawHistory()
+        void DrawHistory(bool aab)
         {
-            if (_history.entries.Count == 0)
+            var kind = aab ? "AAB" : "APK";
+            var entries = _history.entries.Where(e => e.isAab == aab).ToList();
+            if (entries.Count == 0)
             {
-                EditorGUILayout.LabelField("Chưa có build nào.", EditorStyles.miniLabel);
+                EditorGUILayout.LabelField($"Chưa có build {kind} nào.", EditorStyles.miniLabel);
                 return;
             }
 
-            EditorGUILayout.LabelField($"Giữ tối đa {BuildHistory.MaxApk} APK / {BuildHistory.MaxAab} AAB (file cũ hơn bị xóa).",
+            EditorGUILayout.LabelField($"Giữ tối đa {(aab ? BuildHistory.MaxAab : BuildHistory.MaxApk)} {kind} (file cũ hơn bị xóa).",
                 EditorStyles.miniLabel);
 
-            foreach (var e in _history.entries.ToList())
+            foreach (var e in entries)
             {
                 var exists = File.Exists(e.path);
                 using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
@@ -628,7 +1034,7 @@ namespace Raccoon.BuildEditor
                     if (e.noAds) flags.Add("no ads");
                     if (e.useTestAd) flags.Add("test ad");
                     EditorGUILayout.LabelField(
-                        $"{e.timestamp} · {e.presetName} · {(e.isAab ? "AAB" : "APK")} · {e.version} ({e.versionCode})",
+                        $"{e.timestamp} · {e.presetName} · {e.version} ({e.versionCode})",
                         EditorStyles.boldLabel);
                     EditorGUILayout.LabelField(
                         $"{e.sizeBytes / 1048576f:0.0} MB · {e.durationSeconds:0}s" +

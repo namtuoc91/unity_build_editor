@@ -90,8 +90,9 @@ namespace Raccoon.BuildEditor
                     return Fail(outcome, "Switch Platform sang Android thất bại.");
                 }
 
-                // 3. Ads (adpack): sửa thật + SAVE scene/asset, không restore.
-                if (AdsSettingApplier.IsAdPackInstalled)
+                // 3. Ads (adpack) + No Ads rule của project: sửa thật + SAVE scene/asset, không restore.
+                var hasRules = NoAdsRuleApplier.HasActiveRules(config.noAdsRules, fx.noAds);
+                if (AdsSettingApplier.IsAdPackInstalled || hasRules)
                 {
                     if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
                     {
@@ -101,11 +102,26 @@ namespace Raccoon.BuildEditor
                     }
 
                     sceneSetup = EditorSceneManager.GetSceneManagerSetup();
-                    var adsErrors = AdsSettingApplier.Apply(fx.ads, scenes, outcome.warnings);
-                    if (adsErrors.Count > 0)
+                    if (AdsSettingApplier.IsAdPackInstalled)
                     {
-                        outcome.errors.AddRange(adsErrors);
-                        return Fail(outcome, "Không set được Ads setting");
+                        var adsErrors = AdsSettingApplier.Apply(fx.ads, scenes, outcome.warnings);
+                        if (adsErrors.Count > 0)
+                        {
+                            outcome.errors.AddRange(adsErrors);
+                            return Fail(outcome, "Không set được Ads setting");
+                        }
+                    }
+
+                    if (hasRules)
+                    {
+                        var rules = NoAdsRuleApplier.Apply(config.noAdsRules, fx.noAds, scenes, false);
+                        outcome.warnings.AddRange(rules.warnings);
+                        foreach (var i in rules.infos) Debug.Log(Log + "No Ads rule: " + i);
+                        if (rules.errors.Count > 0)
+                        {
+                            outcome.errors.AddRange(rules.errors);
+                            return Fail(outcome, "Không set được No Ads rule");
+                        }
                     }
                 }
 

@@ -1,6 +1,6 @@
 {
   "name": "com.raccoon.build-editor",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "displayName": "Raccoon Build Editor",
   "description": "Editor tool build Android (APK/AAB) cho Unity 6: preset Dev/Release, auto version code, keystore, review AdMob mediation, adb install.",
   "unity": "6000.0",

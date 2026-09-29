@@ -42,6 +42,7 @@ namespace Raccoon.BuildEditor
         public string keystorePass;
         public string keyAliasPass;
         public bool adPackInstalled;
+        public List<NoAdsRule> noAdsRules = new List<NoAdsRule>();
         public MediationReport mediation;
     }
 
@@ -102,8 +103,23 @@ namespace Raccoon.BuildEditor
             }
 
             // Ads
-            if (!i.adPackInstalled && (p.noAds || p.useTestAd))
-                Warn("Chưa cài com.raccoon.adpack → bỏ qua No Ads / Use Test Ad.");
+            var rules = i.noAdsRules ?? new List<NoAdsRule>();
+            if (!i.adPackInstalled && p.useTestAd)
+                Warn("Chưa cài com.raccoon.adpack → bỏ qua Use Test Ad.");
+            if (!i.adPackInstalled && p.noAds && rules.All(r => !r.enabled))
+                Warn("Chưa cài com.raccoon.adpack và không có No Ads rule → No Ads không có tác dụng.");
+
+            // No Ads rule (check tĩnh; resolve object/property chỉ khi build hoặc bấm "Kiểm tra rule")
+            foreach (var r in rules.Where(r => r.enabled))
+            {
+                var name = NoAdsRuleApplier.Describe(r);
+                if (string.IsNullOrWhiteSpace(r.objectPath) || string.IsNullOrWhiteSpace(r.property))
+                    Err($"No Ads rule '{name}': thiếu Object path hoặc Property.");
+                if (string.IsNullOrEmpty(r.noAdsValue) && string.IsNullOrEmpty(r.adsValue))
+                    Warn($"No Ads rule '{name}': chưa nhập giá trị nào → không có tác dụng.");
+                if (!string.IsNullOrEmpty(r.scenePath) && !(i.scenePaths ?? new string[0]).Contains(r.scenePath))
+                    Warn($"No Ads rule '{name}': scene {r.scenePath} không nằm trong build list → bỏ qua.");
+            }
 
             // Mediation
             if (i.mediation != null)
@@ -152,6 +168,7 @@ namespace Raccoon.BuildEditor
                 keystorePass = BuildConfig.KeystorePass,
                 keyAliasPass = BuildConfig.KeyAliasPass,
                 adPackInstalled = AdsSettingApplier.IsAdPackInstalled,
+                noAdsRules = config.noAdsRules,
                 mediation = mediation
             };
             return Validate(input);
