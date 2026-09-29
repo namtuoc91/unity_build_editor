@@ -2,6 +2,16 @@
 
 Format theo [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), version theo [SemVer](https://semver.org/).
 
+## [0.0.6] - 2026-09-29
+### Added
+- No Ads Rules riêng từng project (lưu trong `RaccoonBuildConfig.json`): set field bool/int/float/string/enum của GameObject/Component trong scene theo cờ No Ads, save scene khi build; lỗi resolve/parse chặn build.
+- UI: rule hiện dưới checkbox No Ads khi bật; chọn scene bằng SceneAsset picker / menu scene trong project; chọn object theo hierarchy scene đã chọn (tự mở tạm scene chưa mở); kéo object để tự điền, dropdown component/property, nút kiểm tra thử (dry run) cho No Ads / có Ads.
+- Ô giá trị rule theo kiểu property (dropdown bool/enum, ô số int/float), kiểu lưu lại khi chọn Property bằng ▼.
+- No Ads bật được khi chưa cài adpack nếu có rule.
+
+### Changed
+- History tách 2 tab riêng: **History APK** / **History AAB** (kèm số lượng).
+
 ## [0.0.5] - 2026-09-29
 ### Fixed
 - adb install thêm `-d` (cho phép cài bản version code thấp hơn nếu bản cũ debuggable).

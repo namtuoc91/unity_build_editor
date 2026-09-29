@@ -16,6 +16,32 @@ namespace Raccoon.BuildEditor
     }
 
     /// <summary>
+    /// Rule No Ads riêng của project: set 1 field trên component (hoặc GameObject) trong scene theo cờ No Ads.
+    /// Value rỗng = không đụng ở trạng thái đó.
+    /// </summary>
+    [Serializable]
+    public class NoAdsRule
+    {
+        public const string GameObjectType = "GameObject";
+
+        public bool enabled = true;
+        /// <summary>Rỗng = mọi scene trong build list.</summary>
+        public string scenePath = "";
+        /// <summary>Đường dẫn hierarchy từ root, vd "Canvas/Shop/BtnRemoveAds".</summary>
+        public string objectPath = "";
+        /// <summary>Tên type (ngắn hoặc full). Rỗng / "GameObject" = chính GameObject.</summary>
+        public string componentType = "";
+        /// <summary>SerializedProperty path, vd "_hideRemoveAds" hoặc "m_IsActive".</summary>
+        public string property = "";
+        public string noAdsValue = "";
+        public string adsValue = "";
+        /// <summary>Kiểu property (tên SerializedPropertyType) lưu khi chọn qua ▼ để UI hiện ô nhập đúng kiểu; rỗng = ô text.</summary>
+        public string valueType = "";
+        /// <summary>Tên các giá trị enum (khi valueType = Enum).</summary>
+        public List<string> enumNames = new List<string>();
+    }
+
+    /// <summary>
     /// Config chung, lưu ở ProjectSettings/RaccoonBuildConfig.json (commit được).
     /// Password keystore KHÔNG lưu ở đây — chỉ nằm trong SessionState.
     /// </summary>
@@ -38,6 +64,8 @@ namespace Raccoon.BuildEditor
         public int appBundleSizeWarningMB = DefaultAppBundleSizeWarningMB;
 
         public List<SceneEntry> scenes = new List<SceneEntry>();
+
+        public List<NoAdsRule> noAdsRules = new List<NoAdsRule>();
 
         public List<BuildPreset> presets = new List<BuildPreset>();
         public int activePresetIndex;
@@ -112,6 +140,7 @@ namespace Raccoon.BuildEditor
         void EnsureValid()
         {
             scenes ??= new List<SceneEntry>();
+            noAdsRules ??= new List<NoAdsRule>();
             presets ??= new List<BuildPreset>();
             if (presets.Count == 0)
             {
