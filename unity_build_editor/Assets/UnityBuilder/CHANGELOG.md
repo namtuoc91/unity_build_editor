@@ -2,6 +2,10 @@
 
 Format theo [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), version theo [SemVer](https://semver.org/).
 
+## [0.0.9] - 2026-09-29
+### Changed
+- No Ads Rules luôn hiện dạng foldout (thu gọn/mở, nhớ trạng thái), không còn ẩn khi tắt No Ads; tiêu đề ghi đang áp Value No Ads / Value Has Ads.
+
 ## [0.0.8] - 2026-09-29
 ### Added
 - Nút "Áp dụng + Save (No Ads / Has Ads)": set No Ads Rule + save scene mà không build, để kiểm tra scene trước khi build.

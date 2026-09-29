@@ -11,6 +11,7 @@ namespace Raccoon.BuildEditor
     public class AndroidBuildWindow : EditorWindow
     {
         const float IconFieldSize = 96f;
+        const string FoldNoAdsRulesKey = "Raccoon.BuildEditor.FoldNoAdsRules";
 
         BuildConfig _config;
         BuildHistory _history;
@@ -286,7 +287,6 @@ namespace Raccoon.BuildEditor
             }
 
             var adPack = AdsSettingApplier.IsAdPackInstalled;
-            var hasRules = _config.noAdsRules.Any(r => r.enabled);
             using (new EditorGUI.DisabledScope(release))
             {
                 using (new EditorGUILayout.HorizontalScope())
@@ -302,19 +302,18 @@ namespace Raccoon.BuildEditor
             else if (release)
                 EditorGUILayout.HelpBox("Release: luôn ép _creativeMode = false và use_test_ad = false (sửa + save scene/asset).", MessageType.None);
 
-            // Rule chỉ hiện khi bật No Ads; lưu ở config chung nên các lần sau / preset khác dùng lại.
-            if (p.noAds && !release)
+            // Rule luôn hiện (collapse được); lưu ở config chung nên các lần sau / preset khác dùng lại.
+            var enabledRules = _config.noAdsRules.Count(r => r.enabled);
+            var foldRules = EditorPrefs.GetBool(FoldNoAdsRulesKey, true);
+            var title = $"No Ads Rules ({enabledRules})" +
+                        (enabledRules > 0 ? (p.noAds && !release ? " → áp Value No Ads" : " → áp Value Has Ads") : "");
+            var newFold = EditorGUILayout.Foldout(foldRules, title, true, EditorStyles.foldoutHeader);
+            if (newFold != foldRules) EditorPrefs.SetBool(FoldNoAdsRulesKey, newFold);
+            if (newFold)
             {
                 EditorGUI.indentLevel++;
-                EditorGUILayout.LabelField($"No Ads Rules ({_config.noAdsRules.Count(r => r.enabled)})", EditorStyles.boldLabel);
                 DrawNoAdsRules();
                 EditorGUI.indentLevel--;
-            }
-            else if (hasRules)
-            {
-                EditorGUILayout.LabelField(" ",
-                    $"{_config.noAdsRules.Count(r => r.enabled)} No Ads rule → áp giá trị 'Value Has Ads' (bật No Ads để sửa rule)",
-                    EditorStyles.miniLabel);
             }
 
             p.cleanCache = EditorGUILayout.Toggle("Clean Build Cache", p.cleanCache);
