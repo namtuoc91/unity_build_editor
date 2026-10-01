@@ -63,7 +63,8 @@ namespace Raccoon.BuildEditor
             var type = ManagerType;
             if (type == null) return errors;
 
-            var assets = new HashSet<Object>();
+            // Lưu path chứ không giữ reference: OpenScene(Single) unload asset không dùng → reference thành fake-null.
+            var assetPaths = new HashSet<string>();
             var managerCount = 0;
 
             foreach (var path in scenePaths)
@@ -103,7 +104,16 @@ namespace Raccoon.BuildEditor
                         }
                         else
                         {
-                            assets.Add(data.objectReferenceValue);
+                            var assetPath = AssetDatabase.GetAssetPath(data.objectReferenceValue);
+                            if (string.IsNullOrEmpty(assetPath))
+                            {
+                                errors.Add($"{path}: adsData của '{m.gameObject.name}' không phải asset trong project.");
+                                sceneOk = false;
+                            }
+                            else
+                            {
+                                assetPaths.Add(assetPath);
+                            }
                         }
                     }
 
@@ -138,7 +148,15 @@ namespace Raccoon.BuildEditor
             if (File.Exists(DefaultAdsAssetPath))
             {
                 var def = AssetDatabase.LoadMainAssetAtPath(DefaultAdsAssetPath);
-                if (def != null && def.GetType().FullName == DataTypeName) assets.Add(def);
+                if (def != null && def.GetType().FullName == DataTypeName) assetPaths.Add(DefaultAdsAssetPath);
+            }
+
+            var assets = new List<Object>();
+            foreach (var assetPath in assetPaths)
+            {
+                var asset = AssetDatabase.LoadMainAssetAtPath(assetPath);
+                if (asset == null) errors.Add($"{assetPath}: không load được asset adsData.");
+                else assets.Add(asset);
             }
 
             var value = target.useTestAd.Value;

@@ -340,12 +340,13 @@ namespace Raccoon.BuildEditor
 
             _config.keystoreAlias = EditorGUILayout.TextField("Alias", _config.keystoreAlias);
 
-            var ksPass = EditorGUILayout.PasswordField("Keystore Password", BuildConfig.KeystorePass);
-            var aliasPass = EditorGUILayout.PasswordField("Alias Password", BuildConfig.KeyAliasPass);
+            // Keystore và alias dùng chung 1 password → nhập 1 lần, set cho cả 2.
+            var ksPass = EditorGUILayout.PasswordField("Password", BuildConfig.KeystorePass);
+            var aliasPass = ksPass;
             if (ksPass != BuildConfig.KeystorePass) BuildConfig.KeystorePass = ksPass;
             if (aliasPass != BuildConfig.KeyAliasPass) BuildConfig.KeyAliasPass = aliasPass;
 
-            EditorGUILayout.HelpBox("Password chỉ lưu trong session Editor (SessionState), không ghi ra file.", MessageType.None);
+            EditorGUILayout.HelpBox("Password dùng chung cho Keystore + Alias. Chỉ lưu trong session Editor (SessionState), không ghi ra file.", MessageType.None);
 
             var exists = !string.IsNullOrEmpty(_config.keystorePath) && File.Exists(_config.keystorePath);
             if (p.mode == BuildMode.Dev &&
