@@ -76,6 +76,17 @@ namespace Raccoon.BuildEditor
             }
         }
 
+        // ---- iOS ----
+
+        // iOS cho phép '-' trong bundle id (Android thì không).
+        static readonly Regex BundleIdRegex = new Regex(@"^[A-Za-z0-9\-]+(\.[A-Za-z0-9\-]+)+$");
+
+        public static bool IsValidBundleId(string bundleId) => !string.IsNullOrEmpty(bundleId) && BundleIdRegex.IsMatch(bundleId);
+
+        static readonly Regex TeamIdRegex = new Regex(@"^[A-Z0-9]{10}$");
+
+        public static bool IsValidTeamId(string teamId) => !string.IsNullOrEmpty(teamId) && TeamIdRegex.IsMatch(teamId);
+
         public static AdsTarget ResolveAds(BuildMode mode, bool noAds, bool useTestAd)
         {
             if (mode == BuildMode.Release) return new AdsTarget(false, false);

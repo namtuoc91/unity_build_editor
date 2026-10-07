@@ -46,6 +46,21 @@ namespace Raccoon.BuildEditor
         public MediationReport mediation;
     }
 
+    /// <summary>Snapshot cho iOS: dùng lại phần chung (preset/version/scene/ads/rule), field Android bỏ qua.</summary>
+    public class IosValidationInput : ValidationInput
+    {
+        public bool iosModuleInstalled = true;
+        public bool activeTargetIsIos = true;
+        public bool needsPods;
+        public bool podFound = true;
+        public bool automaticSigning = true;
+        public string teamId;
+        public bool facebookInstalled;
+        public bool podsToMainTarget = true;
+        public List<string> iconErrors = new List<string>();
+        public List<string> iconWarnings = new List<string>();
+    }
+
     public static class BuildValidator
     {
         /// <summary>Dev: có keystore thật + đủ password thì dùng, không thì debug keystore của Unity.</summary>
@@ -69,15 +84,7 @@ namespace Raccoon.BuildEditor
 
             var release = p.mode == BuildMode.Release;
 
-            if (!BuildRules.IsValidAppId(p.appId))
-                Err($"App ID không hợp lệ: '{p.appId}' (dạng com.company.game).");
-            if (string.IsNullOrWhiteSpace(i.version))
-                Err("Version trống.");
-
-            if (i.scenePaths == null || i.scenePaths.Length == 0)
-                Err("Không có scene nào được bật trong danh sách build.");
-            foreach (var s in i.missingScenes ?? new string[0])
-                Err($"Scene không tồn tại: {s}");
+            ValidateApp(i, list, "App ID", BuildRules.IsValidAppId);
 
             if (!i.androidModuleInstalled)
                 Err("Chưa cài Android Build Support (module Android/IL2CPP) cho Unity này.");
@@ -102,24 +109,7 @@ namespace Raccoon.BuildEditor
                 Info("Dev: không có keystore đầy đủ → dùng debug keystore của Unity.");
             }
 
-            // Ads
-            var rules = i.noAdsRules ?? new List<NoAdsRule>();
-            if (!i.adPackInstalled && p.useTestAd)
-                Warn("Chưa cài com.raccoon.adpack → bỏ qua Use Test Ad.");
-            if (!i.adPackInstalled && p.noAds && rules.All(r => !r.enabled))
-                Warn("Chưa cài com.raccoon.adpack và không có No Ads rule → No Ads không có tác dụng.");
-
-            // No Ads rule (check tĩnh; resolve object/property chỉ khi build hoặc bấm "Kiểm tra rule")
-            foreach (var r in rules.Where(r => r.enabled))
-            {
-                var name = NoAdsRuleApplier.Describe(r);
-                if (string.IsNullOrWhiteSpace(r.objectPath) || string.IsNullOrWhiteSpace(r.property))
-                    Err($"No Ads rule '{name}': thiếu Object path hoặc Property.");
-                if (string.IsNullOrEmpty(r.noAdsValue) && string.IsNullOrEmpty(r.adsValue))
-                    Warn($"No Ads rule '{name}': chưa nhập giá trị nào → không có tác dụng.");
-                if (!string.IsNullOrEmpty(r.scenePath) && !(i.scenePaths ?? new string[0]).Contains(r.scenePath))
-                    Warn($"No Ads rule '{name}': scene {r.scenePath} không nằm trong build list → bỏ qua.");
-            }
+            ValidateAdsAndRules(i, list);
 
             // Mediation
             if (i.mediation != null)
@@ -149,6 +139,47 @@ namespace Raccoon.BuildEditor
             return list;
         }
 
+        static void ValidateApp(ValidationInput i, List<ValidationMessage> list, string idLabel, System.Func<string, bool> isValidId)
+        {
+            void Err(string s) => list.Add(new ValidationMessage(Severity.Error, s));
+            var p = i.preset;
+            if (!isValidId(p.appId))
+                Err($"{idLabel} không hợp lệ: '{p.appId}' (dạng com.company.game).");
+            if (string.IsNullOrWhiteSpace(i.version))
+                Err("Version trống.");
+
+            if (i.scenePaths == null || i.scenePaths.Length == 0)
+                Err("Không có scene nào được bật trong danh sách build.");
+            foreach (var s in i.missingScenes ?? new string[0])
+                Err($"Scene không tồn tại: {s}");
+        }
+
+        static void ValidateAdsAndRules(ValidationInput i, List<ValidationMessage> list)
+        {
+            void Err(string s) => list.Add(new ValidationMessage(Severity.Error, s));
+            void Warn(string s) => list.Add(new ValidationMessage(Severity.Warning, s));
+            var p = i.preset;
+
+            // Ads
+            var rules = i.noAdsRules ?? new List<NoAdsRule>();
+            if (!i.adPackInstalled && p.useTestAd)
+                Warn("Chưa cài com.raccoon.adpack → bỏ qua Use Test Ad.");
+            if (!i.adPackInstalled && p.noAds && rules.All(r => !r.enabled))
+                Warn("Chưa cài com.raccoon.adpack và không có No Ads rule → No Ads không có tác dụng.");
+
+            // No Ads rule (check tĩnh; resolve object/property chỉ khi build hoặc bấm "Kiểm tra rule")
+            foreach (var r in rules.Where(r => r.enabled))
+            {
+                var name = NoAdsRuleApplier.Describe(r);
+                if (string.IsNullOrWhiteSpace(r.objectPath) || string.IsNullOrWhiteSpace(r.property))
+                    Err($"No Ads rule '{name}': thiếu Object path hoặc Property.");
+                if (string.IsNullOrEmpty(r.noAdsValue) && string.IsNullOrEmpty(r.adsValue))
+                    Warn($"No Ads rule '{name}': chưa nhập giá trị nào → không có tác dụng.");
+                if (!string.IsNullOrEmpty(r.scenePath) && !(i.scenePaths ?? new string[0]).Contains(r.scenePath))
+                    Warn($"No Ads rule '{name}': scene {r.scenePath} không nằm trong build list → bỏ qua.");
+            }
+        }
+
         /// <summary>Thu thập trạng thái Editor thật rồi validate.</summary>
         public static List<ValidationMessage> ValidateCurrent(BuildConfig config, BuildPreset preset, MediationReport mediation)
         {
@@ -172,6 +203,79 @@ namespace Raccoon.BuildEditor
                 mediation = mediation
             };
             return Validate(input);
+        }
+
+        public static List<ValidationMessage> ValidateIos(IosValidationInput i)
+        {
+            var list = new List<ValidationMessage>();
+            void Err(string s) => list.Add(new ValidationMessage(Severity.Error, s));
+            void Warn(string s) => list.Add(new ValidationMessage(Severity.Warning, s));
+
+            if (!(i.preset is IosBuildPreset p))
+            {
+                Err("Chưa chọn preset.");
+                return list;
+            }
+
+            ValidateApp(i, list, "Bundle ID", BuildRules.IsValidBundleId);
+
+            if (!i.iosModuleInstalled)
+                Err("Chưa cài iOS Build Support cho Unity này (Unity Hub → Add modules).");
+            if (!i.activeTargetIsIos)
+                Warn("Platform hiện tại không phải iOS — tool sẽ Switch Platform trước khi build (có thể lâu).");
+
+            if (i.needsPods && !i.podFound)
+                Warn("Có EDM4U iOS Resolver nhưng không tìm thấy CocoaPods (pod) → Xcode project thiếu pod (không có .xcworkspace). Cài: brew install cocoapods");
+
+            // Signing: chỉ ghi vào Xcode project, thiếu thì chọn lại trong Xcode → chỉ cảnh báo.
+            if (i.automaticSigning)
+            {
+                if (string.IsNullOrEmpty(i.teamId))
+                    Warn("Chưa nhập Team ID → phải chọn team trong Xcode (Signing & Capabilities) trước khi build.");
+                else if (!BuildRules.IsValidTeamId(i.teamId))
+                    Warn($"Team ID '{i.teamId}' không đúng dạng (10 ký tự A-Z0-9).");
+            }
+            else if (string.IsNullOrEmpty(p.provisioningProfile))
+            {
+                Warn("Manual Signing chưa nhập Provisioning Profile UUID → chọn trong Xcode.");
+            }
+
+            if (i.facebookInstalled && !i.podsToMainTarget)
+                Warn("Có Facebook SDK nhưng đang tắt 'Thêm pod FB vào Unity-iPhone' → phải add framework FB tay trong Xcode.");
+
+            foreach (var e in i.iconErrors ?? new List<string>()) Err(e);
+            foreach (var w in i.iconWarnings ?? new List<string>()) Warn(w);
+
+            ValidateAdsAndRules(i, list);
+            return list;
+        }
+
+        public static List<ValidationMessage> ValidateIosCurrent(BuildConfig shared, IosBuildConfig config, IosBuildPreset preset)
+        {
+            var scenes = shared.EnabledScenePaths;
+            var iconErrors = new List<string>();
+            var iconWarnings = new List<string>();
+            IosXcodePostProcess.CheckIcons(config, iconErrors, iconWarnings);
+            var input = new IosValidationInput
+            {
+                preset = preset,
+                version = shared.version,
+                scenePaths = scenes,
+                missingScenes = scenes.Where(s => !File.Exists(s)).ToArray(),
+                adPackInstalled = AdsSettingApplier.IsAdPackInstalled,
+                noAdsRules = shared.noAdsRules,
+                iosModuleInstalled = BuildPipeline.IsBuildTargetSupported(BuildTargetGroup.iOS, BuildTarget.iOS),
+                activeTargetIsIos = EditorUserBuildSettings.activeBuildTarget == BuildTarget.iOS,
+                needsPods = IosTools.HasIosResolver,
+                podFound = IosTools.PodPath != null,
+                automaticSigning = config.automaticSigning,
+                teamId = config.teamId,
+                facebookInstalled = IosTools.IsFacebookInstalled,
+                podsToMainTarget = config.podsToMainTarget,
+                iconErrors = iconErrors,
+                iconWarnings = iconWarnings
+            };
+            return ValidateIos(input);
         }
 
         public static bool HasErrors(IEnumerable<ValidationMessage> list) => list.Any(m => m.severity == Severity.Error);
