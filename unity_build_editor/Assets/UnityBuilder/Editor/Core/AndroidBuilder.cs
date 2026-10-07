@@ -87,43 +87,11 @@ namespace Raccoon.BuildEditor
                 if (EditorUserBuildSettings.activeBuildTarget != BuildTarget.Android &&
                     !EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Android, BuildTarget.Android))
                 {
-                    return Fail(outcome, "Switch Platform sang Android thất bại.");
+                    return BuildSteps.Fail(outcome, "Switch Platform sang Android thất bại.");
                 }
 
                 // 3. Ads (adpack) + No Ads rule của project: sửa thật + SAVE scene/asset, không restore.
-                var hasRules = NoAdsRuleApplier.HasActiveRules(config.noAdsRules, fx.noAds);
-                if (AdsSettingApplier.IsAdPackInstalled || hasRules)
-                {
-                    if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
-                    {
-                        outcome.cancelled = true;
-                        outcome.status = "Đã hủy (chưa save scene)";
-                        return outcome;
-                    }
-
-                    sceneSetup = EditorSceneManager.GetSceneManagerSetup();
-                    if (AdsSettingApplier.IsAdPackInstalled)
-                    {
-                        var adsErrors = AdsSettingApplier.Apply(fx.ads, scenes, outcome.warnings);
-                        if (adsErrors.Count > 0)
-                        {
-                            outcome.errors.AddRange(adsErrors);
-                            return Fail(outcome, "Không set được Ads setting");
-                        }
-                    }
-
-                    if (hasRules)
-                    {
-                        var rules = NoAdsRuleApplier.Apply(config.noAdsRules, fx.noAds, scenes, false);
-                        outcome.warnings.AddRange(rules.warnings);
-                        foreach (var i in rules.infos) Debug.Log(Log + "No Ads rule: " + i);
-                        if (rules.errors.Count > 0)
-                        {
-                            outcome.errors.AddRange(rules.errors);
-                            return Fail(outcome, "Không set được No Ads rule");
-                        }
-                    }
-                }
+                if (!BuildSteps.ApplyAds(config.noAdsRules, fx, scenes, outcome, ref sceneSetup)) return outcome;
 
                 // 4. PlayerSettings (ghi thẳng, không restore)
                 ApplyPlayerSettings(config, preset, fx);
@@ -219,7 +187,7 @@ namespace Raccoon.BuildEditor
             {
                 Debug.LogException(e);
                 outcome.errors.Add(e.Message);
-                return Fail(outcome, "Exception");
+                return BuildSteps.Fail(outcome, "Exception");
             }
             finally
             {
@@ -287,13 +255,6 @@ namespace Raccoon.BuildEditor
             pValidate.boolValue = enabled;
             if (enabled) pSize.intValue = sizeMB;
             so.ApplyModifiedPropertiesWithoutUndo();
-        }
-
-        static BuildOutcome Fail(BuildOutcome o, string status)
-        {
-            o.status = status;
-            if (o.errors.Count == 0) o.errors.Add(status);
-            return o;
         }
 
         static void ApplyPlayerSettings(BuildConfig config, BuildPreset preset, EffectiveSettings fx)

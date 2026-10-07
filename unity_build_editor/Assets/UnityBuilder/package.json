@@ -1,14 +1,14 @@
 {
   "name": "com.raccoon.build-editor",
-  "version": "0.0.11",
+  "version": "0.0.12",
   "displayName": "Raccoon Build Editor",
-  "description": "Editor tool build Android (APK/AAB) cho Unity 6: preset Dev/Release, auto version code, keystore, review AdMob mediation, adb install.",
+  "description": "Editor tool build cho Unity 6: Android (APK/AAB, keystore, review AdMob mediation, adb install) và iOS (Xcode project, pod FB vào Unity-iPhone, icon A/B test).",
   "unity": "6000.0",
   "author": {
     "name": "Raccoon",
     "url": "https://github.com/namtuoc91/unity_build_editor"
   },
-  "keywords": ["build", "android", "editor", "apk", "aab"],
+  "keywords": ["build", "android", "ios", "xcode", "editor", "apk", "aab"],
   "license": "MIT",
   "repository": {
     "type": "git",
