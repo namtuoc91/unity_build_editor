@@ -5,6 +5,7 @@ using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using static Raccoon.BuildEditor.BuildWindowUtil;
 
 namespace Raccoon.BuildEditor
 {
@@ -28,7 +29,7 @@ namespace Raccoon.BuildEditor
         int _tab;
         bool _foldApp = true, _foldBuild = true, _foldSigning, _foldScenes, _foldOutput, _foldDefines, _foldMediation;
 
-        [MenuItem("Tools/Raccoon/Android Build")]
+        [MenuItem("Raccoon/Build editor/Android Build")]
         public static void Open()
         {
             var window = GetWindow<AndroidBuildWindow>();
@@ -51,6 +52,14 @@ namespace Raccoon.BuildEditor
         void OnDisable()
         {
             AndroidBuilder.BuildFinished -= OnBuildFinished;
+        }
+
+        // iOS Build ghi chung RaccoonBuildConfig.json (version) → đọc lại để không ghi đè bằng bản cũ.
+        void OnFocus()
+        {
+            if (AndroidBuilder.IsBuilding) return;
+            _config = BuildConfig.Load();
+            RefreshValidation();
         }
 
         void OnBuildFinished(BuildOutcome o)
@@ -136,21 +145,6 @@ namespace Raccoon.BuildEditor
 
                 EditorGUILayout.EndScrollView();
             }
-        }
-
-        static bool Section(bool open, string title, System.Action draw)
-        {
-            open = EditorGUILayout.BeginFoldoutHeaderGroup(open, title);
-            if (open)
-            {
-                EditorGUI.indentLevel++;
-                draw();
-                EditorGUI.indentLevel--;
-                EditorGUILayout.Space(4);
-            }
-
-            EditorGUILayout.EndFoldoutHeaderGroup();
-            return open;
         }
 
         void DrawPresetBar()
@@ -992,18 +986,7 @@ namespace Raccoon.BuildEditor
                 }
             }
 
-            if (_validation.Count == 0)
-            {
-                EditorGUILayout.HelpBox("OK — sẵn sàng build.", MessageType.Info);
-                return;
-            }
-
-            foreach (var m in _validation)
-            {
-                var type = m.severity == Severity.Error ? MessageType.Error
-                    : m.severity == Severity.Warning ? MessageType.Warning : MessageType.Info;
-                EditorGUILayout.HelpBox(m.text, type);
-            }
+            DrawValidationList(_validation);
         }
 
         void DrawBuildButtons(BuildPreset p)
@@ -1133,20 +1116,6 @@ namespace Raccoon.BuildEditor
                     }
                 }
             }
-        }
-
-        static string ToProjectRelative(string absolute)
-        {
-            var root = Path.GetFullPath(".").Replace('\\', '/').TrimEnd('/') + "/";
-            var abs = absolute.Replace('\\', '/');
-            return abs.StartsWith(root) ? abs.Substring(root.Length) : abs;
-        }
-
-        static void RevealFolder(string folder)
-        {
-            var full = Path.GetFullPath(string.IsNullOrEmpty(folder) ? "." : folder);
-            Directory.CreateDirectory(full);
-            EditorUtility.RevealInFinder(full);
         }
     }
 }

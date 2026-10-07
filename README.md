@@ -1,6 +1,6 @@
 # Raccoon Build Editor (`com.raccoon.build-editor`)
 
-Editor tool build Android (APK/AAB) cho **Unity 6** (6000.0+). Backend luôn IL2CPP, compression luôn LZ4HC.
+Editor tool build **Android** (APK/AAB) và **iOS** (Xcode project) cho **Unity 6** (6000.0+). Backend luôn IL2CPP, compression luôn LZ4HC.
 
 ## Cài đặt
 
@@ -25,7 +25,9 @@ Hoặc thêm thẳng vào `Packages/manifest.json`:
 ```
 
 ## Sử dụng
-Menu **Tools → Raccoon → Android Build**.
+Menu **Raccoon → Build editor → Android Build** / **iOS Build**.
+
+## Android Build
 
 | Phần | Nội dung |
 |---|---|
@@ -81,6 +83,43 @@ Dùng khi game có object cần đổi thêm biến theo No Ads (vd ẩn nút Re
 
 ### Tên file
 Token: `{product} {version} {code} {date} {time} {mode} {noads}` (`{noads}` → `_noads` khi bật No Ads).
+
+## iOS Build
+Chỉ xuất **Xcode project** (folder `Builds/iOS/<tên preset>`); archive / ký / upload làm tiếp trong Xcode.
+
+### Cần chuẩn bị
+- Unity Hub → cài module **iOS Build Support** cho đúng version Unity.
+- macOS + Xcode để mở/build project (trên Windows vẫn xuất được Xcode project).
+- **CocoaPods** (`brew install cocoapods`) nếu dùng SDK qua EDM4U (AdMob, Facebook, Firebase…) — EDM4U tự `pod install` sau khi export → mở `Unity-iPhone.xcworkspace`.
+- Tài khoản Apple Developer: **Team ID** (Automatic Signing) hoặc **Provisioning Profile UUID** (Manual).
+
+| Phần | Nội dung |
+|---|---|
+| Preset bar | Giống Android; tên preset = tên folder Xcode |
+| App | App Name, Bundle ID (cho phép `-`), Version (dùng chung Android), Build Number (−/+), Auto-increment, Target iOS min |
+| Build | Mode, Development Build, No Ads / Use Test Ad (No Ads Rules dùng chung Android, nút "Sửa rule"), Clean Build (Replace) |
+| Signing | Automatic Signing + Team ID; Manual → Profile UUID theo preset (Dev = Development, Release = Distribution) |
+| Facebook SDK → Unity-iPhone | Bật/tắt + prefix pod |
+| Icon A/B test | Danh sách icon (tên + PNG 1024) |
+| Output | Folder gốc, đường dẫn Xcode project, Append hay Replace |
+| Scenes / Define Symbols | Read-only (scene sửa ở Android Build) |
+
+- **Append / Replace**: folder Xcode đã có và tắt Clean Build → Append (nhanh, giữ chỉnh sửa tay trong Xcode); bật Clean Build → xóa build cache + Replace.
+- **Build number**: `current = max(config, PlayerSettings.iOS.buildNumber)`; như version code Android (fail/cancel thì trả lại).
+
+### Facebook SDK
+Thay cho thao tác tay "Xcode → target Unity-iPhone → Frameworks → add FBSDKCoreKit, FBAEMKit…": post-process (order 45, giữa lúc EDM4U sinh Podfile và chạy pod install) copy các dòng `pod` có tên bắt đầu bằng prefix (mặc định `FBSDK`, `FBAEMKit`) từ target `UnityFramework` sang block `target 'Unity-iPhone'` của Podfile. Chạy lại nhiều lần không bị trùng. Nếu pod đã install trước đó (Append) thì chạy lại `pod install` trong folder Xcode.
+
+### Icon A/B test
+Mỗi icon bật → `Unity-iPhone/Images.xcassets/<Tên>.appiconset` (1 ảnh 1024x1024, Xcode tự sinh các size) + set ở target `Unity-iPhone`:
+- `ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = <Tên1> <Tên2>…`
+- `ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES`
+
+Xcode tự sinh `CFBundleAlternateIcons` trong Info.plist. Dùng cho App Store Connect → **Product Page Optimization** (test icon theo Tên), hoặc đổi icon lúc chạy bằng `setAlternateIconName("<Tên>")` (code native, tool không thêm). Tên chỉ gồm chữ/số/`-`/`_`, khác `AppIcon`; PNG nên không có alpha. Icon set do tool tạo có file đánh dấu `raccoon_alternate_icon` và được xóa/tạo lại mỗi lần build.
+
+### File dữ liệu iOS
+- `ProjectSettings/RaccoonIosBuildConfig.json`: preset iOS, build number, signing, prefix pod, icon A/B (commit được).
+- `Library/RaccoonIosBuildHistory.json`: history local (20 bản gần nhất, không xóa folder Xcode).
 
 ## Chạy test
 Trong repo này: **Window → General → Test Runner → EditMode** (assembly `Raccoon.BuildEditor.Editor.Tests`).

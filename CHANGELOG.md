@@ -2,6 +2,17 @@
 
 Format theo [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), version theo [SemVer](https://semver.org/).
 
+## [0.0.12] - 2026-10-07
+### Added
+- EditorWindow `Raccoon/Build editor/iOS Build`: build ra Xcode project (không archive/IPA). Preset Dev/Release, Bundle ID, Build Number auto-increment, Automatic/Manual Signing (Team ID / Profile UUID), Append vào folder Xcode cũ (Clean Build = Replace), history.
+- Version, scene list, No Ads Rules (+ built-in adpack) dùng chung với Android Build; config iOS riêng ở `ProjectSettings/RaccoonIosBuildConfig.json`.
+- Facebook SDK: tự copy các pod khớp prefix (mặc định `FBSDK`, `FBAEMKit`) sang target `Unity-iPhone` trong Podfile trước khi EDM4U pod install — thay cho add framework FB tay trong Xcode.
+- Icon A/B test: mỗi icon (PNG 1024) → app icon set trong `Images.xcassets` + `ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES` / `INCLUDE_ALL_APPICON_ASSETS` ở target `Unity-iPhone`.
+
+### Changed
+- Đổi menu mở EditorWindow từ `Tools/Raccoon/Android Build` sang `Raccoon/Build editor/Android Build`.
+- Tách bước áp Ads/No Ads Rules (`BuildSteps`) và helper UI (`BuildWindowUtil`) dùng chung Android/iOS; Android Build đọc lại config khi focus (tránh ghi đè version do iOS Build sửa).
+
 ## [0.0.10] - 2026-09-29
 ### Added
 - No Ads Rules hiện rule built-in (chỉ đọc) của adpack: `RaccoonAdsManager._creativeMode` true (No Ads) / false (Has Ads + Release) + `use_test_ad`.
