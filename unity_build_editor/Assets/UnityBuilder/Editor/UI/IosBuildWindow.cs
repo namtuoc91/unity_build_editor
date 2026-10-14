@@ -24,7 +24,7 @@ namespace Raccoon.BuildEditor
         Vector2 _scroll;
         bool _foldApp = true, _foldBuild = true, _foldSigning, _foldFacebook, _foldIcons, _foldScenes, _foldOutput, _foldDefines;
 
-        [MenuItem("Raccoon/Build editor/iOS Build")]
+        [MenuItem("Raccoon/iOS Build")]
         public static void Open()
         {
             var window = GetWindow<IosBuildWindow>();
