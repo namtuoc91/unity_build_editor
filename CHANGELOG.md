@@ -2,6 +2,10 @@
 
 Format theo [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), version theo [SemVer](https://semver.org/).
 
+## [0.0.14] - 2026-10-14
+### Changed
+- Đổi menu về lại `Raccoon/Build editor/Android Build` / `Raccoon/Build editor/iOS Build` (revert thay đổi menu của 0.0.13).
+
 ## [0.0.13] - 2026-10-14
 ### Changed
 - Đổi menu từ `Raccoon/Build editor/Android Build` / `iOS Build` sang `Raccoon/Android Build` / `Raccoon/iOS Build` (bỏ submenu `Build editor`).
