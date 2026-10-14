@@ -25,7 +25,7 @@ Hoặc thêm thẳng vào `Packages/manifest.json`:
 ```
 
 ## Sử dụng
-Menu **Raccoon → Build editor → Android Build** / **iOS Build**.
+Menu **Raccoon → Android Build** / **Raccoon → iOS Build**.
 
 ## Android Build
 

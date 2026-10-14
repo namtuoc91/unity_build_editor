@@ -2,6 +2,10 @@
 
 Format theo [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), version theo [SemVer](https://semver.org/).
 
+## [0.0.13] - 2026-10-14
+### Changed
+- Đổi menu từ `Raccoon/Build editor/Android Build` / `iOS Build` sang `Raccoon/Android Build` / `Raccoon/iOS Build` (bỏ submenu `Build editor`).
+
 ## [0.0.12] - 2026-10-07
 ### Added
 - EditorWindow `Raccoon/Build editor/iOS Build`: build ra Xcode project (không archive/IPA). Preset Dev/Release, Bundle ID, Build Number auto-increment, Automatic/Manual Signing (Team ID / Profile UUID), Append vào folder Xcode cũ (Clean Build = Replace), history.
