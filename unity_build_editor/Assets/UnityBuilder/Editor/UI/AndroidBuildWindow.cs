@@ -29,7 +29,7 @@ namespace Raccoon.BuildEditor
         int _tab;
         bool _foldApp = true, _foldBuild = true, _foldSigning, _foldScenes, _foldOutput, _foldDefines, _foldMediation;
 
-        [MenuItem("Raccoon/Android Build")]
+        [MenuItem("Raccoon/Build editor/Android Build")]
         public static void Open()
         {
             var window = GetWindow<AndroidBuildWindow>();
