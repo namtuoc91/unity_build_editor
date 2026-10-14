@@ -1,6 +1,6 @@
 {
   "name": "com.raccoon.build-editor",
-  "version": "0.0.13",
+  "version": "0.0.14",
   "displayName": "Raccoon Build Editor",
   "description": "Editor tool build cho Unity 6: Android (APK/AAB, keystore, review AdMob mediation, adb install) và iOS (Xcode project, pod FB vào Unity-iPhone, icon A/B test).",
   "unity": "6000.0",
